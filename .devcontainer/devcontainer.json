@@ -32,7 +32,7 @@
 				"python.testing.pytestEnabled": true,
 				"python.analysis.diagnosticMode": "openFilesOnly",
 				"python.analysis.include": [
-					"my_project"
+					"phonon_lifetime"
 				],
 				"python.analysis.autoImportCompletions": true,
 				"ty.diagnosticMode": "workspace",

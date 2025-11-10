@@ -1,7 +1,7 @@
 [project]
-name = "my_project"
+name = "phonon_lifetime"
 version = "0.0.1"
-description = "An example Python Package"
+description = "A Package to calculate phonon lifetime"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = []

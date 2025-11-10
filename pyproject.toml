@@ -10,7 +10,7 @@ dependencies = []
 dev = [
     "ruff",
     "pytest >=8.3.3,<9.0.0",
-    "pyright ==1.1.403",
+    "pyright ==1.1.407",
     "sphinx >=8.1.3,<9.0.0",
     "pydata-sphinx-theme >=0.16.0,<0.17.0",
 ]
@@ -68,7 +68,7 @@ testpaths = ["tests"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
-include = ["tests", "phonon_lifetimes", "examples"]
+include = ["tests", "phonon_lifetime", "examples"]
 reportImplicitOverride = true
 reportUnknownMemberType = false
 

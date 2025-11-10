@@ -1,5 +1,5 @@
 
-Documentation of Phonon_lifetime_package
+Documentation of Phonon Lifetime Package
 ===============================
 
 This is a Python package.

@@ -68,7 +68,7 @@ testpaths = ["tests"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
-include = ["tests", "my_project", "examples"]
+include = ["tests", "phonon_lifetimes", "examples"]
 reportImplicitOverride = true
 reportUnknownMemberType = false
 

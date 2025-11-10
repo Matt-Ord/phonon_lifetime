@@ -1,4 +1,4 @@
-project = "Phonon_lifetime"
+project = "Phonon Lifetime"
 author = "Matthew Ord"
 version = "0.0.1"
 

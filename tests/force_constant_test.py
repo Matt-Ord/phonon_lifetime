@@ -5,9 +5,9 @@ import numpy as np
 
 def test_build_force_constant_matrix() -> None:
     fc_target = np.array([[2, -2], [-2, 2]])
-    A = np.zeros((2, 2, 3, 3), dtype=float)
+    a = np.zeros((2, 2, 3, 3), dtype=float)
     # Insert fc_target at the desired location
-    A[0:2, 0:2, 0, 0] = fc_target
+    a[0:2, 0:2, 0, 0] = fc_target
     n_repeats = np.zeros(2, dtype=int)
     spring_constant = np.zeros((2, 1))
     n_repeats[0], n_repeats[1] = 2, 1
@@ -36,10 +36,5 @@ def test_build_force_constant_matrix() -> None:
             fc[i, i, 1, 1] += 2 * ky
             fc[i, jy_p, 1, 1] += -ky
             fc[i, jy_m, 1, 1] += -ky
-    print("A[:, :, 0, 0] =")
-    print(A[:, :, 0, 0])
 
-    print("\nfc =")
-    print(fc)
-
-    np.testing.assert_allclose(A, fc)
+    np.testing.assert_allclose(a, fc)

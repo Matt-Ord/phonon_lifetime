@@ -5,3 +5,7 @@ def test_import() -> None:
         phonon_lifetime = None
 
     assert phonon_lifetime is not None, "my_project module should not be None"
+
+
+def test_example() -> None:
+    assert True

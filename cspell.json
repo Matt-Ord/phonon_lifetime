@@ -19,7 +19,12 @@
         "pyproject",
         "scipy",
         "trange",
-        "tqdm"
+        "tqdm",
+        "axvline",
+        "xlim",
+        "qpoints",
+        "yticks",
+        "axhline"
     ],
     "flagWords": [
         "hte",

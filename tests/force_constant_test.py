@@ -4,7 +4,7 @@ import numpy as np
 
 from phonon_lifetime.normal_modes_lifetime import (
     System,
-    _build_force_constant_matrix,
+    _build_force_constant_matrix,  # noqa: PLC2701 # type: ignore in test folder
 )
 
 

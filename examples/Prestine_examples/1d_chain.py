@@ -13,20 +13,20 @@ from phonon_lifetime.normal_modes_lifetime import (
 
 if __name__ == "__main__":
     chain = System(
-        element="Au",
+        element="Ni",
         cell=np.diag([1.0, 1.0, 1.0]),
         n_repeats=(15, 1, 1),
-        spring_constant=(1, 1.0, 0.0),
+        spring_constant=(1, 0.0, 0.0),
     )
 
     modes = calculate_normal_modes(chain)
-
+    print(modes.omega)
     # Save results and plot to a folder
     folder = Path("./examples")
     modes_output = folder / "1d_chain.normal_modes.txt"
     modes_output.write_text(modes.to_human_readable(), encoding="utf-8")
-
-    plot_output = folder / "1d_chain.dispersion_plot.png"
+    print("modes matrix size:", np.size(modes.modes))
+    plot_output = folder / "1d_chain.dispersion_plot_Ni.png"
     fig, _ = plot_dispersion(modes)
     fig.savefig(plot_output)
     # View and plot the supercell structure

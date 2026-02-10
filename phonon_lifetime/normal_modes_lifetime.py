@@ -34,6 +34,37 @@ class System:
 
 
 @dataclass(kw_only=True, frozen=True)
+class NormalMode:
+    omega: float
+    """The normal mode frequencies in angular frequency units."""
+    modes: np.array
+    """The eigenvectors (normal modes) of the system."""
+    q_val: np.ndarray
+    """The reduced wave vectors for the normal modes."""
+
+
+@dataclass(kw_only=True, frozen=True)
+class ModesAtBranch:
+    omega: np.ndarray[Any, np.dtype[np.floating]]
+    """The normal mode frequencies in angular frequency units."""
+    modes: np.ndarray[Any, np.dtype[np.floating]]
+    """The eigenvectors (normal modes) of the system."""
+    q_vals: np.ndarray[Any, np.dtype[np.floating]]
+    """The reduced wave vectors for the normal modes."""
+
+
+@dataclass(kw_only=True, frozen=True)
+class ModesAtQ:
+    omega: np.ndarray[Any, np.dtype[np.floating]]
+    """The normal mode frequencies in angular frequency units."""
+    modes: np.ndarray[Any, np.dtype[np.floating]]
+    """The eigenvectors (normal modes) of the system."""
+    q_val: np.ndarray[Any, np.dtype[np.floating]]
+    """The reduced wave vectors for the normal modes."""
+    getmodesatbranch
+
+
+@dataclass(kw_only=True, frozen=True)
 class NormalModeResult:
     """Result of a normal mode calculation for a phonon system."""
 
@@ -44,6 +75,16 @@ class NormalModeResult:
     """The eigenvectors (normal modes) of the system."""
     q_vals: np.ndarray[Any, np.dtype[np.floating]]
     """The reduced wave vectors for the normal modes."""
+
+    def get_ModesAtBranch(self, branch):
+        return self.modes[..., branch]
+
+    def get_ModesAtQPoint(self, q_index):
+        return self.modes[q_index, ...]
+
+    @property
+    def q_x(self) -> np.ndarray[Any]:
+        return self.q_vals[..., 0]
 
     def to_human_readable(self) -> str:
         """Convert the result to a text representation."""
@@ -110,16 +151,38 @@ def calculate_normal_modes(system: System) -> NormalModeResult:
     return NormalModeResult(
         system=system,
         omega=mesh_dict["frequencies"][sorted_indices] * 1e12 * 2 * np.pi,
-        modes=mesh_dict["eigenvectors"][sorted_indices][..., 0],
+        modes=mesh_dict["eigenvectors"][sorted_indices],
         q_vals=mesh_dict["qpoints"][sorted_indices, 0],
     )
 
 
 def plot_dispersion(modes: NormalModeResult) -> tuple[Figure, Axes]:
-    """Plot the phonon dispersion relation for a 1D chain on a graph, including analytical curve."""
+    """Plot the phonon dispersion relation for a 1D chain on a graph, including analytical
+    curve.
+    """
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(
+        np.fft.ifftshift(modes.q_vals),
+        np.fft.ifftshift(modes.dispersion),
+        "o-",
+        label="Dispersion relation",
+    )
+    ax.set_xlim(
+        -np.pi / modes.system.lattice_constant[0],
+        np.pi / modes.system.lattice_constant[0],
+    )
+    ax.set_xlabel("Wave vector $q$")
+    ax.set_ylabel("Frequency $\\omega(q)$")
+    ax.set_title("Phonon Dispersion Relation")
+    ax.grid(visible=True)
+    ax.legend()
+    fig.tight_layout()
+    return fig, ax
+
+    """
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    ax.plot(modes.q_vals, modes.omega, "o", label="Numerical")
+    ax.plot(modes.q_x, modes.omega, "o-", label="Numerical")
 
     ax.set_xlim(-0.6, 0.6)
     ax.axvline(0.5, color="gray", linestyle="--", label="First BZ boundary")
@@ -134,3 +197,118 @@ def plot_dispersion(modes: NormalModeResult) -> tuple[Figure, Axes]:
     ax.legend()
     fig.tight_layout()
     return fig, ax
+"""
+    return None
+
+
+"""
+Below are 2-D code
+"""
+
+
+@dataclass(kw_only=True, frozen=True)
+class SquareLattice2DSystem:
+    """Represents a 2D square lattice system for phonon calculations.
+
+    Attributes
+    ----------
+    element : str
+        The chemical symbol of the element.
+    lattice_constantx : float
+        Lattice constant along the x direction.
+    lattice_constanty : float
+        Lattice constant along the y direction.
+    n_repeatsx : int
+        Number of repeats along the x direction.
+    n_repeatsy : int
+        Number of repeats along the y direction.
+    k_nn : float
+        Nearest neighbor spring constant.
+    k_nnn : float
+        Next nearest neighbor spring constant.
+    """
+
+    element: str
+    lattice_constantx: float
+    lattice_constanty: float
+    n_repeatsx: int
+    n_repeatsy: int
+    k_nn: float
+    k_nnn: float
+
+    @property
+    def mass(self) -> float:
+        """Return the mass of the element in atomic mass units."""
+        cell = PhonopyAtoms(
+            symbols=[self.element],
+            cell=[
+                [self.lattice_constantx, 0, 0],
+                [0, self.lattice_constanty, 0],
+                [0, 0, 1],
+            ],
+            scaled_positions=[[0, 0, 0]],
+        )
+        return cell.masses[0]
+
+
+def build_force_constants_2d(system: SquareLattice2DSystem) -> np.ndarray:
+    """
+    Build the force constant matrix for a 2D square lattice system including nearest and next nearest neighbor interactions.
+
+    Parameters
+    ----------
+    system : SquareLattice2DSystem
+        The 2D square lattice system for which to build the force constant matrix.
+
+    Returns
+    -------
+    np.ndarray
+        The force constant matrix of shape (num_atoms, num_atoms, 3, 3).
+    """
+    nx = system.n_repeatsx
+    ny = system.n_repeatsy
+    num_atoms = nx * ny
+    fc = np.zeros((num_atoms, num_atoms, 3, 3), dtype=float)
+    cell = PhonopyAtoms(
+        symbols=[system.element],
+        cell=[
+            [system.lattice_constantx, 0, 0],
+            [0, system.lattice_constanty, 0],
+            [0, 0, 1],
+        ],
+        scaled_positions=[[0, 0, 0]],
+    )
+    supercell_matrix = [[nx, 0, 0], [0, ny, 0], [0, 0, 1]]
+    phonon = Phonopy(unitcell=cell, supercell_matrix=supercell_matrix)
+    position = phonon.supercell.positions
+
+    for i in range(num_atoms):
+        for j in range(num_atoms):
+            if i == j:
+                continue
+            vec: np.ndarray = position[j] - position[i]
+            vec -= np.round(
+                vec
+                / np.array(
+                    [system.lattice_constantx * nx, system.lattice_constanty * ny, 1]
+                )  # Periodic boundary conditions
+            ) * np.array(
+                [system.lattice_constantx * nx, system.lattice_constanty * ny, 1]
+            )
+            dist = np.linalg.norm(vec[:2])
+            a = max(system.lattice_constantx, system.lattice_constanty)
+            if np.isclose(dist, a, atol=0.05):  # Neartest-neighbor
+                direction = vec / np.linalg.norm(vec)
+                for d1 in range(3):
+                    for d2 in range(3):
+                        fc[i, j, d1, d2] += -system.k_nn * direction[d1] * direction[d2]
+                        fc[i, i, d1, d2] += system.k_nn * direction[d1] * direction[d2]
+            elif np.isclose(dist, np.sqrt(2) * a, atol=0.05):  # Next-nearest-neighbor
+                direction = vec / np.linalg.norm(vec)
+                for d1 in range(3):
+                    for d2 in range(3):
+                        fc[i, j, d1, d2] += (
+                            -system.k_nnn * direction[d1] * direction[d2]
+                        )
+                        fc[i, i, d1, d2] += system.k_nnn * direction[d1] * direction[d2]
+    return fc

@@ -12,21 +12,44 @@ if __name__ == "__main__":
     system = System(
         element="Ni",
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(11, 11, 1),
+        n_repeats=(3, 3, 1),
         spring_constant=(1, 1, 0),
     )
     result = calculate_normal_modes(system, vacancy=[])
 
-    mode = result.get_mode(branch=2 * system.n_atoms + 50, q=(0, 0, 0))
+    mode = result.get_mode(branch=10, q=(0, 0, 0))
 
     fig, ax, _ = plot_mode_2d_xy(mode)
     ax.set_title("Phonon Mode for 2D Surface")
-    plt.savefig("./examples/figures/2d_surface.defect.mode.png", dpi=300)
+    plt.savefig("./examples/figures/2d_surface.defect.mode.0.png", dpi=300)
 
     fig, ax, anim = animate_mode_2d_xy(mode)
     ax.set_title("Phonon Mode for 2D Surface")
     anim.save(
-        "./examples/figures/2d_surface.defect.mode_animation.gif",
+        "./examples/figures/2d_surface.defect.mode_animation.0.gif",
+        dpi=300,
+        writer="pillow",
+    )
+
+    system = System(
+        element="Ni",
+        primitive_cell=np.diag([1.0, 1.0, 1.0]),
+        n_repeats=(3, 3, 1),
+        spring_constant=(1, 1, 0),
+    )
+    result = calculate_normal_modes(system, vacancy=[0])
+    print(result.omega)
+
+    mode = result.get_mode(branch=10, q=(0, 0, 0))
+
+    fig, ax, _ = plot_mode_2d_xy(mode)
+    ax.set_title("Phonon Mode for 2D Surface")
+    plt.savefig("./examples/figures/2d_surface.defect.mode.1.png", dpi=300)
+
+    fig, ax, anim = animate_mode_2d_xy(mode)
+    ax.set_title("Phonon Mode for 2D Surface")
+    anim.save(
+        "./examples/figures/2d_surface.defect.mode_animation.1.gif",
         dpi=300,
         writer="pillow",
     )

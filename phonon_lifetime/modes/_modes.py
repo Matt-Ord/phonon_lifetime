@@ -263,8 +263,7 @@ class MassDefectNormalModeResult(NormalModeResult):
         return self.omega.shape[0]
 
     @override
-    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> NormalMode:
-
+    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> MassDefectMode:
         return MassDefectMode(
             _system=self.system,
             _omega=self.omega[branch],

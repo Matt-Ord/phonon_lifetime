@@ -5,8 +5,9 @@ from dataclasses import dataclass
 from typing import Any, override
 
 import numpy as np
+from matplotlib import pyplot as plt
 from phonopy.api_phonopy import Phonopy
-from phonopy.structure.atoms import PhonopyAtoms  # type: ignore[import]
+from phonopy.structure.atoms import PhonopyAtoms
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -16,7 +17,6 @@ class System:
         np.ndarray
     )  # It's not physically primitive cell, just the atom position
     spring_constant: tuple[float, float, float]
-    Defected_cell_size: tuple[int, int, int] = (1, 1, 1)
     vacancy: tuple[int, int, int] | None = (
         None  # vacancy can be the coordinate index of the missing atom or none
     )
@@ -28,7 +28,7 @@ class System:
         p = np.asarray(self.primitive_cell, float)
         if self.vacancy is None:
             return p  # pristine case
-        Nx, Ny, Nz = self.Defected_cell_size
+        Nx, Ny, Nz = self.n_repeats
         return np.diag([Nx, Ny, Nz]) @ p  # For defected lattice, the
 
     @property
@@ -36,7 +36,7 @@ class System:
         if self.vacancy is None:
             return np.array([[0.0, 0.0, 0.0]], float)
 
-        Nx, Ny, Nz = self.Defected_cell_size
+        Nx, Ny, Nz = self.n_repeats
         vx, vy, vz = self.vacancy
         g = (
             np.indices((Nx, Ny, Nz)).reshape(3, -1).T
@@ -61,11 +61,7 @@ class System:
         # build occupancy mask
 
         if self.vacancy is not None:
-            nx, ny, nz = (
-                self.Defected_cell_size[0],
-                self.Defected_cell_size[1],
-                self.Defected_cell_size[2],
-            )
+            nx, ny, nz = self.n_repeats
             occ = np.ones((nx, ny, nz), dtype=bool)
             vx, vy, vz = self.vacancy
             occ[vx % nx, vy % ny, vz % nz] = False
@@ -74,8 +70,12 @@ class System:
             gy = gy[occ]
             gz = gz[occ]
         else:
-            nx, ny, nz = self.n_repeats[0], self.n_repeats[1]
+            nx, ny, nz = self.n_repeats[0], self.n_repeats[1], self.n_repeats[2]
+            occ = np.ones((nx, ny, nz), dtype=bool)
             gx, gy, gz = np.indices((nx, ny, nz))
+            gx = gx[occ]
+            gy = gy[occ]
+            gz = gz[occ]
 
         # grid indices, vacancy removed
         a1 = self.primitive_cell[0]
@@ -89,7 +89,10 @@ class System:
 
 
 def build_force_constant_matrix(system):
-    Nx, Ny = system.Defected_cell_size[0], system.Defected_cell_size[1]
+    if system.vacancy is not None:
+        Nx, Ny = system.n_repeats[0], system.n_repeats[1]
+    else:
+        Nx, Ny = system.n_repeats[0], system.n_repeats[1]
     kx, ky = system.spring_constant[0], system.spring_constant[1]
 
     def idx(ix: int, iy: int) -> int:
@@ -155,7 +158,14 @@ class NormalModeResult:
         dq = self.q_vals - q_target[None, :]
         dq -= np.rint(dq)
         iq = int(np.argmin(np.sum(dq * dq, axis=1)))
-        return DefectedNormalMode(
+        if self.system.vacancy is not None:
+            return DefectedNormalMode(
+                _system=self.system,
+                omega=self.omega[iq, branch],
+                modes=self.modes[iq, :, branch],
+                q_val=self.q_vals[iq, :],
+            )
+        return PristineNormalMode(
             _system=self.system,
             omega=self.omega[iq, branch],
             modes=self.modes[iq, :, branch],
@@ -169,8 +179,10 @@ def calculate_normal_modes(system: System) -> NormalModeResult:
         cell=system.unit_cell,
         scaled_positions=system.unit_scaled_positions,
     )
-
-    supercell_matrix = np.diag(system.n_repeats)
+    if system.vacancy is not None:
+        supercell_matrix = np.diag([1.0, 1.0, 1.0])
+    else:
+        supercell_matrix = np.diag(system.n_repeats)
     phonon = Phonopy(unitcell=cell, supercell_matrix=supercell_matrix)
 
     phonon.force_constants = build_force_constant_matrix(system)
@@ -220,15 +232,12 @@ class PristineNormalMode(NormalMode):
         phx = np.exp(2j * np.pi * qx * (np.arange(nx) / nx))  # (Nx,)
         phy = np.exp(2j * np.pi * qy * (np.arange(ny) / ny))  # (Ny,)
         phz = np.exp(2j * np.pi * qz * (np.arange(nz) / nz))  # (Ny,)
-        print(phx.shape)
-
         phase = (
             phx[:, None, None]
             * phy[None, :, None]
             * phz[None, None, :]
             * np.exp(-1j * self.omega * time)
         )  # (Nx,Ny)
-        print(phase.shape)
         return np.real(phase[..., None] * self.modes)  # (Nx,Ny,3)
 
 
@@ -249,9 +258,9 @@ class DefectedNormalMode(NormalMode):
 
     def get_displacement(self, time: float = 0.0) -> np.ndarray[Any, Any]:
         system = self.system
-        nx, ny, nz = system.Defected_cell_size
+        nx, ny, nz = system.n_repeats
         qx, qy, qz = self.q_val
-
+        print("Calling Defected Mode")
         # 1) build occupancy mask
         occ = np.ones((nx, ny, nz), dtype=bool)
         vx, vy, vz = system.vacancy
@@ -267,7 +276,36 @@ class DefectedNormalMode(NormalMode):
         len(gy)
         evec = self.modes
         evec = evec.reshape(8, 3)
-        print(evec.shape)
+
         # 3) phase factor per atom
         phase = np.exp(2j * np.pi * (qx * (gx / nx) + qy * (gy / ny) + qz * (gz / nz)))
+        print(phase)
+        print(evec)
         return np.real(phase[..., None] * evec)
+
+
+def Plot_displacement(
+    result: NormalModeResult,
+    time: float = 0,
+    branch: int = 0,
+    q: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    vacancy: tuple[int, int, int] | None = (
+        None  # vacancy can be the coordinate index of the missing atom or none
+    ),
+) -> None:
+    mode = result.get_mode(branch, q)
+    print("frequency", mode.omega)
+    u = mode.get_displacement()
+    X, Y = mode.system.get_atom_centres()
+    fig, ax = plt.subplots(figsize=(6, 6))
+    if vacancy is None:
+        ax.quiver(
+            X, Y, u[:, :, 0, 0], u[:, :, 0, 1], angles="xy", scale_units="xy", scale=1.0
+        )
+    else:
+        ax.quiver(X, Y, u[:, 0], u[:, 1], angles="xy", scale_units="xy", scale=1.0)
+    ax.set_aspect("equal")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.margins(0.5)
+    return fig

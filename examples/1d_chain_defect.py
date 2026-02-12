@@ -21,13 +21,13 @@ if __name__ == "__main__":
 
     mode = result.get_mode(branch=203, q=(0, 0, 0))
     fig, ax, _ = plot_mode_1d_x(mode)
-    ax.set_title("Phonon Mode for 1D Chain")
-    plt.savefig("./examples/figures/1d_chain.defect.mode.png", dpi=300)
+    ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")
+    plt.savefig("./examples/figures/1d_chain.vacancy_defect.mode.png", dpi=300)
 
     fig, ax, anim = animate_mode_1d_x(mode)
-    ax.set_title("Phonon Mode for 1D Chain")
+    ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")
     anim.save(
-        "./examples/figures/1d_chain.defect.mode_animation.gif",
+        "./examples/figures/1d_chain.vacancy_defect.mode_animation.gif",
         dpi=300,
         writer="pillow",
     )
@@ -36,11 +36,11 @@ if __name__ == "__main__":
 
     mode = result.get_mode(branch=203, q=(0, 0, 0))
     fig, ax, _ = plot_mode_1d_x(mode)
-    ax.set_title("Phonon Mode for 1D Chain")
+    ax.set_title("Phonon Mode for 1D Chain with Mass Defect")
     plt.savefig("./examples/figures/1d_chain.mass_defect.mode.png", dpi=300)
 
     fig, ax, anim = animate_mode_1d_x(mode)
-    ax.set_title("Phonon Mode for 1D Chain")
+    ax.set_title("Phonon Mode for 1D Chain with Mass Defect")
     anim.save(
         "./examples/figures/1d_chain.mass_defect.mode_animation.gif",
         dpi=300,

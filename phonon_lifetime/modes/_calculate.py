@@ -175,7 +175,7 @@ def calculate_normal_modes(
 @overload
 def calculate_normal_modes(
     system: System, *, defect: MassDefect
-) -> VacancyNormalModeResult: ...
+) -> MassDefectNormalModeResult: ...
 
 
 def calculate_normal_modes(

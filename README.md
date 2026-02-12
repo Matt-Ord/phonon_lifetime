@@ -1,6 +1,6 @@
 # Project Template
 
-View the `my_project` package documentation [here](https://matt-ord.github.io/my_project/).
+View the `phonon_lifetime` package documentation [here](https://matt-ord.github.io/phonon_lifetime/).
 
 ## Setup
 
@@ -23,10 +23,11 @@ This project uses a **Dev Container** (via **VS Code**) and **[`uv`](https://git
 To setup the template
 
 - Re-name the `my_project` folder to `your_project_name`
-- Update references in `pyproject.toml`
+- Update references in `pyproject.toml`, including the project name, description, and python.analysis.include
 - Update path of imports in `tests/import_test.py` and `examples/example.py`
 - Update details in `docs/source/conf.py`
 - Update details in `docs/source/index.rst`
+- Update the GitHub workflow step to `Build Sphinx documentation` in `.github/workflows/deploy.yml`, and the link to docs in `README.md`
 - Update python.analysis.include in `.devcontainer/devcontainer.json`
 
 ### Dependency Management
@@ -41,6 +42,12 @@ uv add --dev <package-name>
 
 This adds the package to `pyproject.toml` and updates the lockfile,
 where `--dev` adds it to the development dependencies.
+
+To install dependencies, run:
+
+```bash
+uv sync --all-extras
+```
 
 ### Spell checker
 

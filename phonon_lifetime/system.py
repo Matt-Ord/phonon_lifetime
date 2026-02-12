@@ -1,3 +1,4 @@
+import warnings
 from dataclasses import dataclass
 from typing import Literal
 
@@ -17,6 +18,11 @@ class System:
         assert self.primitive_cell.shape == (3, 3), (
             "Primitive cell should be a 3x3 array of lattice vectors."
         )
+        if any(r % 2 == 0 for r in self.n_repeats):
+            warnings.warn(
+                "Even n_repeats will result in modes which are not periodic.",
+                stacklevel=2,
+            )
 
     @property
     def n_atoms(self) -> int:

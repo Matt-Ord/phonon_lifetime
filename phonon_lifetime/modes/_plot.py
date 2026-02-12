@@ -90,9 +90,9 @@ def plot_1d_dispersion(
 ) -> tuple[Figure, Axes, Line2D]:
     fig, ax = _get_axis(ax)
 
-    q_vals = result.q_vals.reshape(*result.system.n_repeats, 3)[:, *idx, :]
+    q_vals = result.q_vals.reshape(*result.system.n_repeats, -1)[:, *idx, :]
     qx = q_vals[:, 0]
-    energies = result.omega[:, branch].reshape(*result.system.n_repeats)[..., *idx]
+    energies = result.omega[:, branch].reshape(*result.system.n_repeats)[:, *idx]
 
     (line,) = ax.plot(
         np.fft.fftshift(qx),  # cspell: disable-line
@@ -111,10 +111,10 @@ def plot_dispersion_2d_xy(
 ) -> tuple[Figure, Axes, QuadMesh]:
     fig, ax = _get_axis(ax)
 
-    q_vals = result.q_vals.reshape(*result.system.n_repeats, 3)[..., idx, :]
-    qx = q_vals[..., 0]
-    qy = q_vals[..., 1]
-    energies = result.omega[:, branch].reshape(*result.system.n_repeats)[..., idx]
+    q_vals = result.q_vals.reshape(*result.system.n_repeats, 3)[:, :, idx, :]
+    qx = q_vals[:, :, 0]
+    qy = q_vals[:, :, 1]
+    energies = result.omega[:, branch].reshape(*result.system.n_repeats)[:, :, idx]
 
     mesh = ax.pcolormesh(  # cspell: disable-line
         np.fft.fftshift(qx),  # cspell: disable-line

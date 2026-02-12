@@ -4,7 +4,7 @@ import numpy as np
 from phonon_lifetime import System
 from phonon_lifetime.modes import (
     calculate_normal_modes,
-    plot_2d_dispersion,
+    plot_dispersion_2d_xy,
     plot_mode_2d_xy,
 )
 
@@ -23,14 +23,14 @@ if __name__ == "__main__":
     plt.savefig("./examples/figures/2d_surface.mode.png", dpi=300)
 
     fig, ax = plt.subplots()
-    fig, ax, mesh = plot_2d_dispersion(result, branch=2, ax=ax)
+    fig, ax, mesh = plot_dispersion_2d_xy(result, branch=2, ax=ax)
     fig.colorbar(mesh, label="Energy (THz)")
 
     ax.set_title("Phonon Dispersion Relation for 2D Surface")
     plt.savefig("./examples/figures/2d_surface.dispersion.2.png", dpi=300)
 
     fig, ax = plt.subplots()
-    fig, ax, mesh = plot_2d_dispersion(result, branch=1, ax=ax)
+    fig, ax, mesh = plot_dispersion_2d_xy(result, branch=1, ax=ax)
     fig.colorbar(mesh, label="Energy (THz)")
 
     ax.set_title("Phonon Dispersion Relation for 2D Surface")

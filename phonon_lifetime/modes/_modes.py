@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, override
 
 import numpy as np
@@ -89,17 +90,17 @@ class PristineMode(NormalMode):
         """The primitive vector of the mode."""
         return self._primitive_vector
 
-    @property
     @override
+    @cached_property
     def vector(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
         system = self.system
         nx, ny, nz = system.n_repeats
         qx, qy, qz = self._q_val
 
         # phase(i,j,k) = exp(2πi (qx*i/Nx + qy*j/Ny + qz*k/Nz) - i ω t)
-        phx = np.exp(2j * np.pi * qx * (np.arange(nx) / nx))  # (Nx,)
-        phy = np.exp(2j * np.pi * qy * (np.arange(ny) / ny))  # (Ny,)
-        phz = np.exp(2j * np.pi * qz * (np.arange(nz) / nz))  # (Nz,)
+        phx = np.exp(2j * np.pi * qx * (np.arange(nx)))  # (Nx,)
+        phy = np.exp(2j * np.pi * qy * (np.arange(ny)))  # (Ny,)
+        phz = np.exp(2j * np.pi * qz * (np.arange(nz)))  # (Nz,)
         # the full phase of each atom, shape (Nx, Ny, Nz)
         phase = phx[:, None, None] * phy[None, :, None] * phz[None, None, :]
         phase = np.ravel(phase)

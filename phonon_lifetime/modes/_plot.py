@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.animation import ArtistAnimation
 from matplotlib.figure import Figure
 
 from phonon_lifetime.modes._modes import get_mode_displacement
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.collections import QuadMesh
     from matplotlib.lines import Line2D
+    from matplotlib.quiver import Quiver
 
     from phonon_lifetime import PristineNormalModeResult
     from phonon_lifetime.modes import NormalMode
@@ -33,22 +35,50 @@ def plot_mode_1d_x(
     idx: tuple[int, int] = (0, 0),
     *,
     ax: Axes | None = None,
-) -> tuple[Figure, Axes]:
+) -> tuple[Figure, Axes, Line2D]:
     fig, ax = _get_axis(ax)
 
     displacement = get_mode_displacement(mode, time=time)
     displacement = displacement.reshape(*mode.system.n_repeats, 3)
     displacement_x = displacement[:, *idx, 0]
+    displacement_x = np.append(displacement_x, displacement_x[0])
 
     centres_x, _, _ = get_atom_centres(mode.system).T
     centres_x = centres_x.reshape(*mode.system.n_repeats)[:, *idx]
+    centres_x = np.append(centres_x, centres_x[-1] + mode.system.primitive_cell[0, 0])
 
-    ax.plot(centres_x, displacement_x)
+    (line,) = ax.plot(centres_x, displacement_x)
 
     ax.set_xlabel("x")
     ax.set_ylabel("x displacement")
-    ax.set_xlim(0, mode.system.n_repeats[0] * mode.system.primitive_cell[0, 0])
-    return fig, ax
+    ax.set_xlim(0, centres_x[-1])
+    return fig, ax, line
+
+
+def _get_default_times(mode: NormalMode) -> np.ndarray[Any, np.dtype[np.floating]]:
+    """Get the default times to animate a mode."""
+    if mode.omega == 0:
+        return np.linspace(0, 1, 20)
+    period = 2 * np.pi / mode.omega
+    return np.linspace(0, period, 20)
+
+
+def animate_mode_1d_x(
+    mode: NormalMode,
+    times: np.ndarray[Any, np.dtype[np.floating]] | None = None,
+    idx: tuple[int, int] = (0, 0),
+    *,
+    ax: Axes | None = None,
+) -> tuple[Figure, Axes, ArtistAnimation]:
+    fig, ax = _get_axis(ax)
+
+    times = times if times is not None else _get_default_times(mode)
+    artists: list[list[Line2D]] = []
+    for time in times:
+        line = plot_mode_1d_x(mode, time=time, idx=idx, ax=ax)[2]
+        line.set_color("C0")
+        artists.append([line])
+    return fig, ax, ArtistAnimation(fig, artists)
 
 
 def plot_1d_dispersion(
@@ -103,7 +133,7 @@ def plot_mode_2d_xy(
     idx: int = 0,
     *,
     ax: Axes | None = None,
-) -> tuple[Figure, Axes]:
+) -> tuple[Figure, Axes, Quiver]:
     fig, ax = _get_axis(ax)
 
     displacement = get_mode_displacement(mode, time=time)
@@ -112,7 +142,7 @@ def plot_mode_2d_xy(
     displacement = displacement.reshape(*mode.system.n_repeats, 3)
     displacement_xy = displacement[:, :, idx, :2]
 
-    ax.quiver(
+    quiver = ax.quiver(
         centres_x.reshape(*mode.system.n_repeats)[:, :, idx],
         centres_y.reshape(*mode.system.n_repeats)[:, :, idx],
         displacement_xy[:, :, 0],
@@ -125,4 +155,18 @@ def plot_mode_2d_xy(
     ax.set_aspect("equal")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    return fig, ax
+    return fig, ax, quiver
+
+
+def animate_mode_2d_xy(
+    mode: NormalMode,
+    times: np.ndarray[Any, np.dtype[np.floating]] | None = None,
+    idx: int = 0,
+    *,
+    ax: Axes | None = None,
+) -> tuple[Figure, Axes, ArtistAnimation]:
+    fig, ax = _get_axis(ax)
+
+    times = times if times is not None else _get_default_times(mode)
+    artists = [[plot_mode_2d_xy(mode, time=t, idx=idx, ax=ax)[2]] for t in times]
+    return fig, ax, ArtistAnimation(fig, artists)

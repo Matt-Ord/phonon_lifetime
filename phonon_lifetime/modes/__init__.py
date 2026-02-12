@@ -10,6 +10,8 @@ from ._modes import (
     VacancyNormalModeResult,
 )
 from ._plot import (
+    animate_mode_1d_x,
+    animate_mode_2d_xy,
     plot_1d_dispersion,
     plot_dispersion_2d_xy,
     plot_mode_1d_x,
@@ -23,9 +25,10 @@ __all__ = [
     "PristineNormalModeResult",
     "VacancyMode",
     "VacancyNormalModeResult",
+    "animate_mode_1d_x",
+    "animate_mode_2d_xy",
     "calculate_normal_modes",
     "plot_1d_dispersion",
-    "plot_2d_dispersion",
     "plot_dispersion_2d_xy",
     "plot_mode_1d_x",
     "plot_mode_2d_xy",

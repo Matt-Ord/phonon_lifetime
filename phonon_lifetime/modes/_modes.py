@@ -158,7 +158,7 @@ class VacancyMode(NormalMode):
     @property
     @override
     def vector(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        defective_vector = self._modes
+        defective_vector = self._modes.reshape(-1, 3)
 
         out = np.zeros((self.system.n_atoms, 3), dtype=np.complex128)
         indices = np.delete(np.arange(self.system.n_atoms), self._vacancy)

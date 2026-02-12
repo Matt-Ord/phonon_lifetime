@@ -25,11 +25,9 @@ if __name__ == "__main__":
 
     fig, ax, anim = animate_mode_1d_x(mode)
     ax.set_title("Phonon Mode for 1D Chain")
-    print("done")
     anim.save(
         "./examples/figures/1d_chain.mode_animation.gif", dpi=300, writer="pillow"
     )
-    print("done")
 
     fig, ax = plt.subplots()
     fig, ax, line = plot_1d_dispersion(result, branch=0, ax=ax)

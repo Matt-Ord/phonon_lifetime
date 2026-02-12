@@ -2,10 +2,14 @@
 
 from ._calculate import calculate_normal_modes
 from ._modes import (
+    MassDefect,
+    MassDefectMode,
+    MassDefectNormalModeResult,
     NormalMode,
     NormalModeResult,
     PristineMode,
     PristineNormalModeResult,
+    VacancyDefect,
     VacancyMode,
     VacancyNormalModeResult,
 )
@@ -19,10 +23,14 @@ from ._plot import (
 )
 
 __all__ = [
+    "MassDefect",
+    "MassDefectMode",
+    "MassDefectNormalModeResult",
     "NormalMode",
     "NormalModeResult",
     "PristineMode",
     "PristineNormalModeResult",
+    "VacancyDefect",
     "VacancyMode",
     "VacancyNormalModeResult",
     "animate_mode_1d_x",

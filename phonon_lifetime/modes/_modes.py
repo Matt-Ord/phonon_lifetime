@@ -111,8 +111,8 @@ class PristineNormalModeResult(NormalModeResult):
     """Result of a normal mode calculation for a phonon system."""
 
     system: System
-    omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (Nq, Nbranch)
-    modes: np.ndarray[Any, np.dtype[np.floating]]  # shape = (Nq, natom*3,Nbranch)
+    omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (Nq, n_branch)
+    modes: np.ndarray[Any, np.dtype[np.floating]]  # shape = (Nq, n_atoms*3, n_branch)
     q_vals: np.ndarray[Any, np.dtype[np.floating]]  # shape = (Nq, dim)
 
     @property
@@ -176,8 +176,8 @@ class VacancyNormalModeResult(NormalModeResult):
     """Result of a normal mode calculation for a vacancy system."""
 
     system: System
-    omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = ( Nbranch)
-    modes: np.ndarray[Any, np.dtype[np.floating]]  # shape = ( natos, 3,Nbranch)
+    omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_branch)
+    modes: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_atoms, 3, n_branch)
     vacancy: list[int]
 
     @property

@@ -117,7 +117,7 @@ def _get_normal_modes_pristine(
         system=system,
         omega=mesh_dict["frequencies"] * 1e12 * 2 * np.pi,
         modes=mesh_dict["eigenvectors"],
-        q_vals=mesh_dict["qpoints"],
+        q_vals=mesh_dict["qpoints"],  # cspell: disable-line
     )
 
 

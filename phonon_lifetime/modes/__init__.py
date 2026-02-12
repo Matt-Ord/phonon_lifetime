@@ -11,7 +11,7 @@ from ._modes import (
 )
 from ._plot import (
     plot_1d_dispersion,
-    plot_2d_dispersion,
+    plot_dispersion_2d_xy,
     plot_mode_1d_x,
     plot_mode_2d_xy,
 )
@@ -26,6 +26,7 @@ __all__ = [
     "calculate_normal_modes",
     "plot_1d_dispersion",
     "plot_2d_dispersion",
+    "plot_dispersion_2d_xy",
     "plot_mode_1d_x",
     "plot_mode_2d_xy",
 ]

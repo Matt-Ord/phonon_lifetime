@@ -140,6 +140,13 @@ class PristineNormalModeResult(NormalModeResult):
 
 
 @dataclass(kw_only=True, frozen=True)
+class VacancyDefect:
+    """A vacancy defect in the system."""
+
+    defects: list[int]
+
+
+@dataclass(kw_only=True, frozen=True)
 class VacancyMode(NormalMode):
     """A normal mode of a system with a vacancy."""
 
@@ -148,7 +155,7 @@ class VacancyMode(NormalMode):
     """Frequency of one mode (rad/s)."""
     _modes: np.ndarray
     """Wave vector for this mode."""
-    _vacancy: list[int]
+    _defect: VacancyDefect
 
     @property
     @override
@@ -161,7 +168,7 @@ class VacancyMode(NormalMode):
         defective_vector = self._modes.reshape(-1, 3)
 
         out = np.zeros((self.system.n_atoms, 3), dtype=np.complex128)
-        indices = np.delete(np.arange(self.system.n_atoms), self._vacancy)
+        indices = np.delete(np.arange(self.system.n_atoms), self._defect.defects)
         out[indices] = defective_vector
 
         return out
@@ -179,7 +186,7 @@ class VacancyNormalModeResult(NormalModeResult):
     system: System
     omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_branch)
     modes: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_atoms, 3, n_branch)
-    vacancy: list[int]
+    _defect: VacancyDefect
 
     @property
     @override
@@ -198,5 +205,69 @@ class VacancyNormalModeResult(NormalModeResult):
             _system=self.system,
             _omega=self.omega[branch],
             _modes=self.modes[:, branch],
-            _vacancy=self.vacancy,
+            _defect=self._defect,
+        )
+
+
+@dataclass(kw_only=True, frozen=True)
+class MassDefect:
+    """A mass defect in the system."""
+
+    defects: list[tuple[str, int]]
+
+
+@dataclass(kw_only=True, frozen=True)
+class MassDefectMode(NormalMode):
+    """A normal mode of a system with a mass defect."""
+
+    _system: System
+    _omega: float
+    """Frequency of one mode (rad/s)."""
+    _modes: np.ndarray
+    """Wave vector for this mode."""
+    _defect: MassDefect
+
+    @property
+    @override
+    def system(self) -> System:
+        return self._system
+
+    @property
+    @override
+    def vector(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
+        return self._modes.reshape(-1, 3)
+
+    @property
+    @override
+    def omega(self) -> float:
+        return self._omega
+
+
+@dataclass(kw_only=True, frozen=True)
+class MassDefectNormalModeResult(NormalModeResult):
+    """Result of a normal mode calculation for a mass defect system."""
+
+    system: System
+    omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_branch)
+    modes: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_atoms, 3, n_branch)
+    _defect: MassDefect
+
+    @property
+    @override
+    def n_q(self) -> int:
+        return 0
+
+    @property
+    @override
+    def n_branch(self) -> int:
+        return self.omega.shape[0]
+
+    @override
+    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> NormalMode:
+
+        return MassDefectMode(
+            _system=self.system,
+            _omega=self.omega[branch],
+            _modes=self.modes[:, branch],
+            _defect=self._defect,
         )

@@ -7,7 +7,10 @@ from phonopy.api_phonopy import Phonopy
 from phonopy.structure.atoms import PhonopyAtoms
 
 from phonon_lifetime.modes._modes import (
+    MassDefect,
+    MassDefectNormalModeResult,
     PristineNormalModeResult,
+    VacancyDefect,
     VacancyNormalModeResult,
 )
 from phonon_lifetime.system import get_scaled_positions
@@ -17,17 +20,53 @@ if TYPE_CHECKING:
     from phonon_lifetime.system import System
 
 
+def _get_normal_modes_mass_defect(
+    system: System,
+    defect: MassDefect,
+) -> MassDefectNormalModeResult:
+
+    all_positions = get_scaled_positions(system)
+    symbols = [system.element] * system.n_atoms
+    for element, index in defect.defects:
+        symbols[index] = element
+
+    cell = PhonopyAtoms(
+        symbols=symbols,
+        cell=system.supercell_cell,
+        scaled_positions=all_positions,
+    )
+
+    phonon = Phonopy(
+        unitcell=cell, supercell_matrix=np.eye(3), primitive_matrix=np.eye(3)
+    )
+
+    pristine_force_constants = _build_pristine_force_constant_matrix(system)
+    phonon.force_constants = pristine_force_constants
+
+    phonon.run_mesh((1, 1, 1), with_eigenvectors=True, is_mesh_symmetry=False)
+
+    mesh_dict = phonon.get_mesh_dict()
+
+    return MassDefectNormalModeResult(
+        system=system,
+        omega=mesh_dict["frequencies"][0] * 1e12 * 2 * np.pi,
+        modes=mesh_dict["eigenvectors"][0],
+        _defect=defect,
+    )
+
+
 def _get_normal_modes_vacancy(
     system: System,
-    vacancy: list[int],
+    defect: VacancyDefect,
 ) -> VacancyNormalModeResult:
+    vacancy = defect.defects
     n_vacancy = system.n_atoms - len(vacancy)
     all_positions = get_scaled_positions(system)
 
     cell = PhonopyAtoms(
         symbols=[system.element] * n_vacancy,
         cell=system.supercell_cell,
-        scaled_positions=np.delete(all_positions, vacancy, axis=0),
+        scaled_positions=np.delete(all_positions, defect.defects, axis=0),
     )
 
     phonon = Phonopy(
@@ -47,7 +86,7 @@ def _get_normal_modes_vacancy(
         system=system,
         omega=mesh_dict["frequencies"][0] * 1e12 * 2 * np.pi,
         modes=mesh_dict["eigenvectors"][0],
-        vacancy=vacancy,
+        _defect=defect,
     )
 
 
@@ -123,19 +162,27 @@ def _get_normal_modes_pristine(
 
 @overload
 def calculate_normal_modes(
-    system: System, *, vacancy: None = None
+    system: System, *, defect: None = None
 ) -> PristineNormalModeResult: ...
 
 
 @overload
 def calculate_normal_modes(
-    system: System, *, vacancy: list[int]
+    system: System, *, defect: VacancyDefect
+) -> VacancyNormalModeResult: ...
+
+
+@overload
+def calculate_normal_modes(
+    system: System, *, defect: MassDefect
 ) -> VacancyNormalModeResult: ...
 
 
 def calculate_normal_modes(
-    system: System, *, vacancy: list[int] | None = None
+    system: System, *, defect: VacancyDefect | MassDefect | None = None
 ) -> NormalModeResult:
-    if vacancy is not None:
-        return _get_normal_modes_vacancy(system, vacancy)
+    if isinstance(defect, VacancyDefect):
+        return _get_normal_modes_vacancy(system, defect)
+    if isinstance(defect, MassDefect):
+        return _get_normal_modes_mass_defect(system, defect)
     return _get_normal_modes_pristine(system)

@@ -18,7 +18,7 @@ if __name__ == "__main__":
     )
     result = calculate_normal_modes(system)
 
-    mode = result.get_mode(branch=2, q=(2, 0, 0))
+    mode = result.get_mode(branch=2, q=(1, 0, 0))
     fig, ax, _ = plot_mode_1d_x(mode)
     ax.set_title("Phonon Mode for 1D Chain")
     plt.savefig("./examples/figures/1d_chain.mode.png", dpi=300)

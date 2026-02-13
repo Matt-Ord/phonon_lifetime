@@ -186,7 +186,7 @@ class PristineSystem(System):
         mesh_dict = phonon.get_mesh_dict()
         return PristineModes(
             _system=self,
-            _omega=mesh_dict["frequencies"] * 1e12 * 2 * np.pi,
+            _omega=mesh_dict["frequencies"] * 2 * np.pi,
             _modes=mesh_dict["eigenvectors"],
             _q_vals=mesh_dict["qpoints"],  # cspell: disable-line
         )

@@ -51,6 +51,10 @@ class NormalModes[S: System](ABC):
     def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> NormalMode[S]:
         """Select the normal mode for a given branch and q point."""
 
+    def as_canonical(self) -> CanonicalModes[S]:
+        """Convert this mode to the canonical form."""
+        return CanonicalModes(omega=self.omega, vector=self.vector, system=self.system)
+
 
 class NormalMode[S: System](ABC):
     """Represents a normal mode of the system."""
@@ -106,3 +110,51 @@ class CanonicalMode[S: System](NormalMode[S]):
     def system(self) -> S:
         """The system that this normal mode belongs to."""
         return self._system
+
+
+class CanonicalModes[S: System](NormalModes[S]):
+    """A collection of normal modes in the canonical form, with vectors provided explicitly."""
+
+    def __init__(
+        self,
+        *,
+        omega: np.ndarray[tuple[int], np.dtype[np.floating]],
+        vector: np.ndarray[tuple[int, int], np.dtype[np.complex128]],
+        system: S,
+    ) -> None:
+        self._omega = omega
+        self._vector = vector
+        self._system = system
+
+    @property
+    @override
+    def omega(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        return self._omega
+
+    @property
+    @override
+    def vector(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
+        return self._vector
+
+    @property
+    @override
+    def system(self) -> S:
+        return self._system
+
+    @property
+    @override
+    def n_q(self) -> int:
+        return 1
+
+    @property
+    @override
+    def n_branch(self) -> int:
+        return self._omega.shape[0]
+
+    @override
+    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> CanonicalMode[S]:
+        return CanonicalMode(
+            system=self._system,
+            omega=self._omega[branch],
+            vector=self._vector[branch].reshape(-1, 3),
+        )

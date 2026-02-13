@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class VacancyMode(CanonicalMode["VacancySystem"]):
-    """A normal mode of a pristine system."""
+    """A normal mode of a vacancy defect system."""
 
 
 @dataclass(kw_only=True, frozen=True)

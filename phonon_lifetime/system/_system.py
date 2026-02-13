@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import numpy as np
 
@@ -44,9 +44,9 @@ class System(ABC):
         """Return a new System with no defects."""
 
     @abstractmethod
-    def get_modes(self) -> NormalModes:
+    def get_modes(self) -> NormalModes[Self]:
         """Get the normal modes of the system."""
 
-    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> NormalMode:
+    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> NormalMode[Self]:
         """Get the normal mode for a given branch and q point."""
         return self.get_modes().get_mode(branch=branch, q=q)

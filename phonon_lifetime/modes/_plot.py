@@ -1,32 +1,19 @@
 from typing import TYPE_CHECKING, Any
 
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import ArtistAnimation
-from matplotlib.figure import Figure
 
-from phonon_lifetime.modes._modes import get_mode_displacement
+from phonon_lifetime._util import get_axis
+from phonon_lifetime.modes._util import get_mode_displacement
 from phonon_lifetime.system import get_atom_centres
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.collections import QuadMesh
+    from matplotlib.figure import Figure
     from matplotlib.lines import Line2D
     from matplotlib.quiver import Quiver
 
-    from phonon_lifetime import PristineNormalModeResult
-    from phonon_lifetime.modes import NormalMode
-
-
-def _get_axis(ax: Axes | None) -> tuple[Figure, Axes]:
-    """Get the axis to plot on."""
-    if ax is None:
-        fig, ax = plt.subplots()
-        assert ax is not None
-        return fig, ax
-    fig = ax.get_figure()
-    assert isinstance(fig, Figure)
-    return fig, ax
+    from phonon_lifetime.modes._mode import NormalMode
 
 
 def plot_mode_1d_x(
@@ -36,7 +23,7 @@ def plot_mode_1d_x(
     *,
     ax: Axes | None = None,
 ) -> tuple[Figure, Axes, Line2D]:
-    fig, ax = _get_axis(ax)
+    fig, ax = get_axis(ax)
 
     displacement = get_mode_displacement(mode, time=time)
     displacement = displacement.reshape(*mode.system.n_repeats, 3)
@@ -70,7 +57,7 @@ def animate_mode_1d_x(
     *,
     ax: Axes | None = None,
 ) -> tuple[Figure, Axes, ArtistAnimation]:
-    fig, ax = _get_axis(ax)
+    fig, ax = get_axis(ax)
 
     times = times if times is not None else _get_default_times(mode)
     artists: list[list[Line2D]] = []
@@ -81,52 +68,6 @@ def animate_mode_1d_x(
     return fig, ax, ArtistAnimation(fig, artists)
 
 
-def plot_1d_dispersion(
-    result: PristineNormalModeResult,
-    branch: int,
-    idx: tuple[int, int] = (0, 0),
-    *,
-    ax: Axes | None = None,
-) -> tuple[Figure, Axes, Line2D]:
-    fig, ax = _get_axis(ax)
-
-    q_vals = result.q_vals.reshape(*result.system.n_repeats, -1)[:, *idx, :]
-    qx = q_vals[:, 0]
-    energies = result.omega[:, branch].reshape(*result.system.n_repeats)[:, *idx]
-
-    (line,) = ax.plot(
-        np.fft.fftshift(qx),  # cspell: disable-line
-        np.fft.fftshift(energies),  # cspell: disable-line
-    )
-
-    return fig, ax, line
-
-
-def plot_dispersion_2d_xy(
-    result: PristineNormalModeResult,
-    branch: int,
-    idx: int = 0,
-    *,
-    ax: Axes | None = None,
-) -> tuple[Figure, Axes, QuadMesh]:
-    fig, ax = _get_axis(ax)
-
-    q_vals = result.q_vals.reshape(*result.system.n_repeats, 3)[:, :, idx, :]
-    qx = q_vals[:, :, 0]
-    qy = q_vals[:, :, 1]
-    energies = result.omega[:, branch].reshape(*result.system.n_repeats)[:, :, idx]
-
-    mesh = ax.pcolormesh(  # cspell: disable-line
-        np.fft.fftshift(qx),  # cspell: disable-line
-        np.fft.fftshift(qy),  # cspell: disable-line
-        np.fft.fftshift(energies),  # cspell: disable-line
-    )
-    ax.set_aspect("equal")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    return fig, ax, mesh
-
-
 def plot_mode_2d_xy(
     mode: NormalMode,
     time: float = 0,
@@ -134,7 +75,7 @@ def plot_mode_2d_xy(
     *,
     ax: Axes | None = None,
 ) -> tuple[Figure, Axes, Quiver]:
-    fig, ax = _get_axis(ax)
+    fig, ax = get_axis(ax)
 
     displacement = get_mode_displacement(mode, time=time)
     centres_x, centres_y, _ = get_atom_centres(mode.system).T
@@ -165,7 +106,7 @@ def animate_mode_2d_xy(
     *,
     ax: Axes | None = None,
 ) -> tuple[Figure, Axes, ArtistAnimation]:
-    fig, ax = _get_axis(ax)
+    fig, ax = get_axis(ax)
 
     times = times if times is not None else _get_default_times(mode)
     artists = [[plot_mode_2d_xy(mode, time=t, idx=idx, ax=ax)[2]] for t in times]

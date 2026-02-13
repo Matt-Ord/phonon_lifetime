@@ -1,43 +1,20 @@
 """A collection of code for manipulating normal modes."""
 
-from ._calculate import calculate_normal_modes
-from ._modes import (
-    MassDefect,
-    MassDefectMode,
-    MassDefectNormalModeResult,
-    NormalMode,
-    NormalModeResult,
-    PristineMode,
-    PristineNormalModeResult,
-    VacancyDefect,
-    VacancyMode,
-    VacancyNormalModeResult,
-)
+from ._mode import NormalMode, NormalModes
 from ._plot import (
     animate_mode_1d_x,
     animate_mode_2d_xy,
-    plot_1d_dispersion,
-    plot_dispersion_2d_xy,
     plot_mode_1d_x,
     plot_mode_2d_xy,
 )
+from ._util import get_mode_displacement
 
 __all__ = [
-    "MassDefect",
-    "MassDefectMode",
-    "MassDefectNormalModeResult",
     "NormalMode",
-    "NormalModeResult",
-    "PristineMode",
-    "PristineNormalModeResult",
-    "VacancyDefect",
-    "VacancyMode",
-    "VacancyNormalModeResult",
+    "NormalModes",
     "animate_mode_1d_x",
     "animate_mode_2d_xy",
-    "calculate_normal_modes",
-    "plot_1d_dispersion",
-    "plot_dispersion_2d_xy",
+    "get_mode_displacement",
     "plot_mode_1d_x",
     "plot_mode_2d_xy",
 ]

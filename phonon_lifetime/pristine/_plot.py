@@ -24,7 +24,7 @@ def plot_dispersion_1d(
 
     q_vals = result.q_vals.reshape(*result.system.n_repeats, -1)[:, *idx, :]
     qx = q_vals[:, 0]
-    energies = result.omega[:, branch].reshape(*result.system.n_repeats)[:, *idx]
+    energies = result.get_dispersion(branch).reshape(*result.system.n_repeats)[:, *idx]
 
     (line,) = ax.plot(
         np.fft.fftshift(qx),  # cspell: disable-line
@@ -46,7 +46,8 @@ def plot_dispersion_2d_xy(
     q_vals = result.q_vals.reshape(*result.system.n_repeats, 3)[:, :, idx, :]
     qx = q_vals[:, :, 0]
     qy = q_vals[:, :, 1]
-    energies = result.omega[:, branch].reshape(*result.system.n_repeats)[:, :, idx]
+    energies = result.get_dispersion(branch).reshape(*result.system.n_repeats)
+    energies = energies[:, :, idx]
 
     mesh = ax.pcolormesh(  # cspell: disable-line
         np.fft.fftshift(qx),  # cspell: disable-line

@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pytest
 
 from phonon_lifetime.pristine import PristineSystem
 from phonon_lifetime.system._util import (
@@ -64,6 +65,7 @@ def test_build_force_matrix_x() -> None:
     np.testing.assert_array_equal(actual, desired)
 
 
+@pytest.mark.filterwarnings("ignore:Even n_repeats ")
 def test_build_force_matrix_y() -> None:
     system = PristineSystem(
         mass=10,

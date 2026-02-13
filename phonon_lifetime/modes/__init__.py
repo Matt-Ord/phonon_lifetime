@@ -1,6 +1,6 @@
 """A collection of code for manipulating normal modes."""
 
-from ._mode import NormalMode, NormalModes
+from ._mode import CanonicalMode, NormalMode, NormalModes
 from ._plot import (
     animate_mode_1d_x,
     animate_mode_2d_xy,
@@ -10,6 +10,7 @@ from ._plot import (
 from ._util import get_mode_displacement
 
 __all__ = [
+    "CanonicalMode",
     "NormalMode",
     "NormalModes",
     "animate_mode_1d_x",

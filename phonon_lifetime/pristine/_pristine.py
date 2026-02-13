@@ -12,8 +12,23 @@ from phonon_lifetime.modes import NormalMode, NormalModes
 from phonon_lifetime.system._util import get_pristine_force_matrix
 
 
+def get_crystal_phases(
+    system: PristineSystem, q_val: tuple[float, float, float]
+) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
+    """Get the phase of each atom in the crystal."""
+    nx, ny, nz = system.n_repeats
+    qx, qy, qz = q_val
+    # phase(i,j,k) = exp(2πi (qx*i/Nx + qy*j/Ny + qz*k/Nz) - i ω t)
+    phx = np.exp(2j * np.pi * qx * (np.arange(nx)))  # (Nx,)
+    phy = np.exp(2j * np.pi * qy * (np.arange(ny)))  # (Ny,)
+    phz = np.exp(2j * np.pi * qz * (np.arange(nz)))  # (Nz,)
+    # the full phase of each atom, shape (Nx, Ny, Nz)
+    phase = phx[:, None, None] * phy[None, :, None] * phz[None, None, :]
+    return np.ravel(phase)
+
+
 @dataclass(kw_only=True, frozen=True)
-class PristineMode(NormalMode):
+class PristineMode(NormalMode["PristineSystem"]):
     """A normal mode of a pristine system."""
 
     _system: PristineSystem
@@ -21,7 +36,7 @@ class PristineMode(NormalMode):
     """Frequency of one mode (rad/s)."""
     _primitive_vector: np.ndarray
     """Eigenvector of that mode."""
-    _q_val: np.ndarray
+    _q_val: tuple[float, float, float]
     """Wave vector for this mode."""
 
     @property
@@ -42,28 +57,25 @@ class PristineMode(NormalMode):
     @override
     @cached_property
     def vector(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        system = self.system
-        nx, ny, nz = system.n_repeats
-        qx, qy, qz = self._q_val
-
-        # phase(i,j,k) = exp(2πi (qx*i/Nx + qy*j/Ny + qz*k/Nz) - i ω t)
-        phx = np.exp(2j * np.pi * qx * (np.arange(nx)))  # (Nx,)
-        phy = np.exp(2j * np.pi * qy * (np.arange(ny)))  # (Ny,)
-        phz = np.exp(2j * np.pi * qz * (np.arange(nz)))  # (Nz,)
-        # the full phase of each atom, shape (Nx, Ny, Nz)
-        phase = phx[:, None, None] * phy[None, :, None] * phz[None, None, :]
-        phase = np.ravel(phase)
-        return phase[..., None] * self.primitive_vector
+        phases = get_crystal_phases(self.system, self._q_val)
+        return phases[..., None] * self.primitive_vector
 
 
 @dataclass(kw_only=True, frozen=True)
-class PristineModes(NormalModes):
+class PristineModes(NormalModes["PristineSystem"]):
     """Result of a normal mode calculation for a phonon system."""
 
     _system: PristineSystem
     _omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_q, n_branch)
-    _modes: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_q, n_atoms*3, n_branch)
+    # modes with shape = (n_q, n_atoms * 3, n_branch)
+    _modes: np.ndarray[Any, np.dtype[np.floating]]
     _q_vals: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_q, 3)
+
+    @property
+    @override
+    def omega(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        """A np.array of frequencies for each mode."""
+        return self._omega.reshape(-1)
 
     @property
     @override
@@ -75,13 +87,6 @@ class PristineModes(NormalModes):
         """The q values for each mode, shape (n_q, 3)."""
         # TODO: calculate this on the fly # noqa: FIX002
         return self._q_vals
-
-    @property
-    def omega(self) -> np.ndarray[Any, np.dtype[np.floating]]:
-        """The frequencies for each mode, shape (n_q, n_branch)."""
-        # TODO: we should provede a better api to make it clear that  # noqa: FIX002
-        # we are selecting ie a specific branch
-        return self._omega
 
     @property
     @override
@@ -102,8 +107,12 @@ class PristineModes(NormalModes):
             _system=self._system,
             _omega=self._omega[iq, branch],
             _primitive_vector=self._modes[iq, :, branch],
-            _q_val=self._q_vals[iq, :],
+            _q_val=tuple(self._q_vals[iq, :]),
         )
+
+    def get_dispersion(self, branch: int) -> np.ndarray[Any, np.dtype[np.floating]]:
+        """Get the dispersion for a given branch."""
+        return self._omega[:, branch]
 
 
 class PristineSystem(System):

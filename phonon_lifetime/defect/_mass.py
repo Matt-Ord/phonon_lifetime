@@ -6,7 +6,7 @@ from phonopy.api_phonopy import Phonopy
 from phonopy.structure.atoms import PhonopyAtoms
 
 from phonon_lifetime import System
-from phonon_lifetime.modes import NormalMode, NormalModes
+from phonon_lifetime.modes import CanonicalMode, NormalModes
 from phonon_lifetime.system import get_scaled_positions, get_supercell_cell
 from phonon_lifetime.system._util import get_pristine_force_matrix
 
@@ -14,38 +14,28 @@ if TYPE_CHECKING:
     from phonon_lifetime.pristine import PristineSystem
 
 
-@dataclass(kw_only=True, frozen=True)
-class MassDefectMode(NormalMode):
+class MassDefectMode(CanonicalMode["MassDefectSystem"]):
     """A normal mode of a system with a mass defect."""
 
-    _system: MassDefectSystem
-    _omega: float
-    """Frequency of one mode (rad/s)."""
-    _modes: np.ndarray
-
-    @property
-    @override
-    def system(self) -> MassDefectSystem:
-        return self._system
-
-    @property
-    @override
-    def vector(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        return self._modes.reshape(-1, 3)
-
-    @property
-    @override
-    def omega(self) -> float:
-        return self._omega
-
 
 @dataclass(kw_only=True, frozen=True)
-class MassDefectModes(NormalModes):
+class MassDefectModes(NormalModes["MassDefectSystem"]):
     """Result of a normal mode calculation for a mass defect system."""
 
     _system: MassDefectSystem
     _omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_branch)
-    _modes: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_atoms, 3, n_branch)
+    _modes: np.ndarray[Any, np.dtype[np.complex128]]  # shape = (n_atoms * 3, n_branch)
+
+    @property
+    @override
+    def omega(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        """A np.array of frequencies for each mode."""
+        return self._omega
+
+    @property
+    @override
+    def vectors(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
+        return self._modes.transpose(0, 1)
 
     @property
     @override
@@ -65,9 +55,9 @@ class MassDefectModes(NormalModes):
     @override
     def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> MassDefectMode:
         return MassDefectMode(
-            _system=self._system,
-            _omega=self._omega[branch],
-            _modes=self._modes[:, branch],
+            system=self._system,
+            omega=self._omega[branch],
+            vector=self._modes[:, branch].reshape(-1, 3),
         )
 
 

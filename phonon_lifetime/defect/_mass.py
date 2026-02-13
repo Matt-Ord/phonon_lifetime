@@ -136,6 +136,6 @@ class MassDefectSystem(System):
 
         return MassDefectModes(
             _system=self,
-            _omega=mesh_dict["frequencies"][0] * 1e12 * 2 * np.pi,
+            _omega=mesh_dict["frequencies"][0] * 2 * np.pi,
             _modes=mesh_dict["eigenvectors"][0],
         )

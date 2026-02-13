@@ -9,7 +9,7 @@ import numpy as np
 class System:
     """Represents a System of atoms."""
 
-    element: str
+    mass: float
     primitive_cell: np.ndarray[tuple[int, int], np.dtype[np.floating]]
     spring_constant: tuple[float, float, float]
     n_repeats: tuple[int, int, int] = (1, 1, 1)

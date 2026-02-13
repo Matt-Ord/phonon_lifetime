@@ -69,7 +69,7 @@ class MassDefect:
 
 
 class MassDefectSystem(System):
-    """Represents a system with a vacancy."""
+    """Represents a system with a mass defect."""
 
     def __init__(
         self,

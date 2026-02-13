@@ -13,11 +13,11 @@ from phonon_lifetime.system._util import get_pristine_force_matrix
 
 
 def get_crystal_phases(
-    system: PristineSystem, q_val: tuple[float, float, float]
-) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-    """Get the phase of each atom in the crystal."""
+    system: PristineSystem, q: tuple[float, float, float]
+) -> np.ndarray[tuple[int], np.dtype[np.complex128]]:
+    """Get the crystal phase of each atom in the system."""
     nx, ny, nz = system.n_repeats
-    qx, qy, qz = q_val
+    qx, qy, qz = q
     # phase(i,j,k) = exp(2πi (qx*i/Nx + qy*j/Ny + qz*k/Nz) - i ω t)
     phx = np.exp(2j * np.pi * qx * (np.arange(nx)))  # (Nx,)
     phy = np.exp(2j * np.pi * qy * (np.arange(ny)))  # (Ny,)
@@ -34,9 +34,9 @@ class PristineMode(NormalMode["PristineSystem"]):
     _system: PristineSystem
     _omega: float
     """Frequency of one mode (rad/s)."""
-    _primitive_vector: np.ndarray
+    _primitive_vector: np.ndarray[tuple[int], np.dtype[np.complex128]]
     """Eigenvector of that mode."""
-    _q_val: tuple[float, float, float]
+    _q: tuple[float, float, float]
     """Wave vector for this mode."""
 
     @property
@@ -57,7 +57,7 @@ class PristineMode(NormalMode["PristineSystem"]):
     @override
     @cached_property
     def vector(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        phases = get_crystal_phases(self.system, self._q_val)
+        phases = get_crystal_phases(self.system, self._q)
         return phases[..., None] * self.primitive_vector
 
 
@@ -68,7 +68,7 @@ class PristineModes(NormalModes["PristineSystem"]):
     _system: PristineSystem
     _omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_q, n_branch)
     # modes with shape = (n_q, n_atoms * 3, n_branch)
-    _modes: np.ndarray[Any, np.dtype[np.floating]]
+    _modes: np.ndarray[Any, np.dtype[np.complex128]]
     _q_vals: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_q, 3)
 
     @property
@@ -107,7 +107,7 @@ class PristineModes(NormalModes["PristineSystem"]):
             _system=self._system,
             _omega=self._omega[iq, branch],
             _primitive_vector=self._modes[iq, :, branch],
-            _q_val=tuple(self._q_vals[iq, :]),
+            _q=tuple(self._q_vals[iq, :]),
         )
 
     def get_dispersion(self, branch: int) -> np.ndarray[Any, np.dtype[np.floating]]:

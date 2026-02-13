@@ -17,7 +17,7 @@ class NormalModes[S: System](ABC):
 
     @property
     def vectors(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        """The vector of the mode, an (n_modes, n_atoms) array."""
+        """The vector of the mode, an (n_modes, n_atoms * 3) array."""
         out = np.zeros(
             (self.n_q, self.n_branch, self.system.n_atoms, 3), dtype=np.complex128
         )

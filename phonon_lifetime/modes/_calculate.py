@@ -26,12 +26,13 @@ def _get_normal_modes_mass_defect(
 ) -> MassDefectNormalModeResult:
 
     all_positions = get_scaled_positions(system)
-    symbols = [system.element] * system.n_atoms
-    for element, index in defect.defects:
-        symbols[index] = element
+    masses = [system.mass] * system.n_atoms
+    for mass, index in defect.defects:
+        masses[index] = mass
 
     cell = PhonopyAtoms(
-        symbols=symbols,
+        symbols=["C"] * system.n_atoms,
+        masses=masses,
         cell=system.supercell_cell,
         scaled_positions=all_positions,
     )
@@ -60,11 +61,12 @@ def _get_normal_modes_vacancy(
     defect: VacancyDefect,
 ) -> VacancyNormalModeResult:
     vacancy = defect.defects
-    n_vacancy = system.n_atoms - len(vacancy)
+    n_simulation_atoms = system.n_atoms - len(vacancy)
     all_positions = get_scaled_positions(system)
 
     cell = PhonopyAtoms(
-        symbols=[system.element] * n_vacancy,
+        symbols=["C"] * n_simulation_atoms,
+        masses=[system.mass] * n_simulation_atoms,
         cell=system.supercell_cell,
         scaled_positions=np.delete(all_positions, defect.defects, axis=0),
     )
@@ -135,7 +137,8 @@ def _get_normal_modes_pristine(
     system: System,
 ) -> PristineNormalModeResult:
     cell = PhonopyAtoms(
-        symbols=[system.element],
+        symbols=["C"],
+        masses=[system.mass],
         cell=system.primitive_cell,
         scaled_positions=[[0.0, 0.0, 0.0]],
     )
@@ -143,7 +146,6 @@ def _get_normal_modes_pristine(
     phonon = Phonopy(
         unitcell=cell,
         supercell_matrix=np.diag(system.n_repeats),
-        primitive_matrix=np.eye(3),
     )
 
     phonon.force_constants = _build_pristine_force_constant_matrix(system)
@@ -151,7 +153,6 @@ def _get_normal_modes_pristine(
     phonon.run_mesh(system.n_repeats, with_eigenvectors=True, is_mesh_symmetry=False)
 
     mesh_dict = phonon.get_mesh_dict()
-
     return PristineNormalModeResult(
         system=system,
         omega=mesh_dict["frequencies"] * 1e12 * 2 * np.pi,

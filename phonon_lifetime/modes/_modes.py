@@ -27,6 +27,11 @@ class NormalMode(ABC):
     def system(self) -> System:
         """The system that this normal mode belongs to."""
 
+    @property
+    @abstractmethod
+    def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        """The masses of the atoms in the simulated mode."""
+
 
 def get_mode_displacement(mode: NormalMode, time: float = 0.0) -> np.ndarray[Any, Any]:
     """Get the displacement of the mode at a given time.
@@ -34,7 +39,8 @@ def get_mode_displacement(mode: NormalMode, time: float = 0.0) -> np.ndarray[Any
     returns an array of displacements (n_atoms, 3) at the given time.
 
     """
-    return np.real(mode.vector * np.exp(-1j * mode.omega * time))
+    out = np.real(mode.vector * np.exp(-1j * mode.omega * time))
+    return out * (np.sqrt(mode.system.mass) / np.sqrt(mode.masses[:, None]))
 
 
 class NormalModeResult(ABC):
@@ -105,6 +111,11 @@ class PristineMode(NormalMode):
         phase = phx[:, None, None] * phy[None, :, None] * phz[None, None, :]
         phase = np.ravel(phase)
         return phase[..., None] * self.primitive_vector
+
+    @property
+    @override
+    def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        return self.system.mass * np.ones(self.system.n_atoms)
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -178,6 +189,11 @@ class VacancyMode(NormalMode):
     def omega(self) -> float:
         return self._omega
 
+    @property
+    @override
+    def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        return self.system.mass * np.ones(self.system.n_atoms)
+
 
 @dataclass(kw_only=True, frozen=True)
 class VacancyNormalModeResult(NormalModeResult):
@@ -213,7 +229,7 @@ class VacancyNormalModeResult(NormalModeResult):
 class MassDefect:
     """A mass defect in the system."""
 
-    defects: list[tuple[str, int]]
+    defects: list[tuple[float, int]]
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -241,6 +257,14 @@ class MassDefectMode(NormalMode):
     @override
     def omega(self) -> float:
         return self._omega
+
+    @property
+    @override
+    def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        out = self.system.mass * np.ones(self.system.n_atoms)
+        for mass, index in self._defect.defects:
+            out[index] = mass
+        return out
 
 
 @dataclass(kw_only=True, frozen=True)

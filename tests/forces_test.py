@@ -48,7 +48,7 @@ def _build_pristine_force_constant_matrix_slow(
 
 def test_build_force_matrix_x() -> None:
     system = System(
-        element="Ni",
+        mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
         n_repeats=(37, 1, 1),
         spring_constant=(1, 0, 0),
@@ -61,7 +61,7 @@ def test_build_force_matrix_x() -> None:
 
 def test_build_force_matrix_y() -> None:
     system = System(
-        element="Ni",
+        mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
         n_repeats=(37, 2, 1),
         spring_constant=(0, 1, 0),
@@ -74,7 +74,7 @@ def test_build_force_matrix_y() -> None:
 
 def test_build_force_matrix_y_flat() -> None:
     system = System(
-        element="Ni",
+        mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
         n_repeats=(37, 1, 1),
         spring_constant=(0, 1, 0),
@@ -87,7 +87,7 @@ def test_build_force_matrix_y_flat() -> None:
 
 def test_build_force_matrix_explicit() -> None:
     system = System(
-        element="Ni",
+        mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
         n_repeats=(3, 1, 1),
         spring_constant=(1, 0, 0),

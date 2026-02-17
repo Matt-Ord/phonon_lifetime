@@ -35,7 +35,7 @@ class MassDefectModes(NormalModes["MassDefectSystem"]):
     @property
     @override
     def vectors(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        return self._modes.transpose(0, 1)
+        return np.transpose(self._modes)
 
     @property
     @override

@@ -13,5 +13,7 @@ def get_mode_displacement(mode: NormalMode, time: float = 0.0) -> np.ndarray[Any
 
     """
     out = np.real(mode.vector * np.exp(-1j * mode.omega * time))
+
     pristine_mass = mode.system.as_pristine().mass
-    return out * (np.sqrt(pristine_mass) / np.sqrt(mode.system.masses[:, None]))
+    prefactor = np.sqrt(pristine_mass) / np.sqrt(mode.system.masses[:, None])
+    return out * (prefactor * np.sqrt(mode.system.n_atoms))

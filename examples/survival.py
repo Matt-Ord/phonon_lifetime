@@ -19,7 +19,7 @@ if __name__ == "__main__":
     mode = result.get_mode(branch=2, q=(1, 0, 0))
 
     fig, ax = plt.subplots()
-    times = np.linspace(0, 600, 500)
+    times = np.linspace(0, 1000, 500)
     for mass in [10, 10.5, 11, 11.5, 12]:
         defect = MassDefectSystem(
             pristine=system, defect=MassDefect(defects=[(mass, 0)])

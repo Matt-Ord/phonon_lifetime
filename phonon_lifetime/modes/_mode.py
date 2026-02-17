@@ -53,7 +53,9 @@ class NormalModes[S: System](ABC):
 
     def as_canonical(self) -> CanonicalModes[S]:
         """Convert this mode to the canonical form."""
-        return CanonicalModes(omega=self.omega, vector=self.vector, system=self.system)
+        return CanonicalModes(
+            omega=self.omega, vectors=self.vectors, system=self.system
+        )
 
 
 class NormalMode[S: System](ABC):
@@ -119,11 +121,11 @@ class CanonicalModes[S: System](NormalModes[S]):
         self,
         *,
         omega: np.ndarray[tuple[int], np.dtype[np.floating]],
-        vector: np.ndarray[tuple[int, int], np.dtype[np.complex128]],
+        vectors: np.ndarray[tuple[int, int], np.dtype[np.complex128]],
         system: S,
     ) -> None:
         self._omega = omega
-        self._vector = vector
+        self._vectors = vectors
         self._system = system
 
     @property
@@ -133,8 +135,8 @@ class CanonicalModes[S: System](NormalModes[S]):
 
     @property
     @override
-    def vector(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        return self._vector
+    def vectors(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
+        return self._vectors
 
     @property
     @override
@@ -156,5 +158,5 @@ class CanonicalModes[S: System](NormalModes[S]):
         return CanonicalMode(
             system=self._system,
             omega=self._omega[branch],
-            vector=self._vector[branch].reshape(-1, 3),
+            vector=self._vectors[branch].reshape(-1, 3),
         )

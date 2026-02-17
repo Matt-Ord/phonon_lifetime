@@ -4,8 +4,6 @@ import numpy as np
 from phonon_lifetime.defect import (
     MassDefect,
     MassDefectSystem,
-    VacancyDefect,
-    VacancySystem,
 )
 from phonon_lifetime.pristine import PristineSystem
 from phonon_lifetime.wannier import plot_wannier_vector
@@ -18,13 +16,9 @@ if __name__ == "__main__":
         spring_constant=(1, 0.0, 0.0),
     )
 
-    modes = VacancySystem(
-        pristine=system, defect=VacancyDefect(defects=[0])
-    ).get_modes()
     modes = MassDefectSystem(
         pristine=system, defect=MassDefect(defects=[(9.8, 0)])
     ).get_modes()
-    modes = system.get_modes()
 
     # We plot wannier modes - but they are rather uninteresting
     # if we include all the modes - they are simply the single atom

@@ -24,7 +24,7 @@ def get_crystal_phases(
     phz = np.exp(2j * np.pi * qz * (np.arange(nz)))  # (Nz,)
     # the full phase of each atom, shape (Nx, Ny, Nz)
     phase = phx[:, None, None] * phy[None, :, None] * phz[None, None, :]
-    return np.ravel(phase)
+    return np.ravel(phase) / np.sqrt(system.n_atoms)
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -163,7 +163,7 @@ class PristineSystem(System):
     @property
     @override
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
-        return np.full(self.n_atoms, self.mass)
+        return np.full(self.n_atoms, self.mass).astype(np.float64)
 
     @override
     def get_modes(self) -> PristineModes:
@@ -174,13 +174,14 @@ class PristineSystem(System):
             scaled_positions=[[0.0, 0.0, 0.0]],
         )
 
-        phonon = Phonopy(
-            unitcell=cell,
-            supercell_matrix=np.diag(self.n_repeats),
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*Point group symmetries.*")
+            phonon = Phonopy(
+                unitcell=cell,
+                supercell_matrix=np.diag(self.n_repeats),
+            )
 
         phonon.force_constants = get_pristine_force_matrix(self)
-
         phonon.run_mesh(self.n_repeats, with_eigenvectors=True, is_mesh_symmetry=False)
 
         mesh_dict = phonon.get_mesh_dict()

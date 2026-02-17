@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 
 from phonon_lifetime.pristine import PristineSystem
-from phonon_lifetime.system._util import (
-    get_pristine_force_matrix,  # noqa: PLC2701
+from phonon_lifetime.system._util import (  # noqa: PLC2701
+    get_pristine_force_matrix,
 )
 
 if TYPE_CHECKING:

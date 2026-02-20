@@ -7,8 +7,8 @@ import numpy as np
 from phonopy.api_phonopy import Phonopy
 from phonopy.structure.atoms import PhonopyAtoms
 
-from phonon_lifetime import System
-from phonon_lifetime.modes import NormalMode, NormalModes
+from phonon_lifetime.modes._mode import NormalMode, NormalModes
+from phonon_lifetime.system._system import System
 from phonon_lifetime.system._util import get_pristine_force_matrix
 
 

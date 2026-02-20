@@ -5,7 +5,7 @@ from matplotlib.animation import ArtistAnimation
 
 from phonon_lifetime._util import get_axis, get_axis_3d
 from phonon_lifetime.modes._util import get_mode_displacement
-from phonon_lifetime.system import get_atom_centres
+from phonon_lifetime.system._util import get_atom_centres
 
 if TYPE_CHECKING:
     from matplotlib.artist import Artist
@@ -116,7 +116,7 @@ def animate_mode_2d_xy(
     return fig, ax, ArtistAnimation(fig, artists)
 
 
-def plot_mode_2d_xyz(
+def plot_mode_xyz(
     mode: NormalMode,
     time: float = 0,
     idx: int = 0,
@@ -129,10 +129,11 @@ def plot_mode_2d_xyz(
     displacement = displacement.reshape(*mode.system.n_repeats, 3)
     centres = get_atom_centres(mode.system).reshape(*mode.system.n_repeats, 3)
 
+    locations = centres[:, :, idx] + displacement[:, :, idx]
     # New positions = Original positions + Displacement
-    x = centres[:, :, idx, 0] + displacement[:, :, idx, 0]
-    y = centres[:, :, idx, 1] + displacement[:, :, idx, 1]
-    z = centres[:, :, idx, 2] + displacement[:, :, idx, 2]
+    x = locations[:, :, 0]
+    y = locations[:, :, 1]
+    z = locations[:, :, 2]
 
     wire = ax.plot_wireframe(x, y, z, color="C0", linewidth=0.5)
     # Add points at each atom
@@ -144,7 +145,7 @@ def plot_mode_2d_xyz(
     return fig, ax, (wire, scatter)
 
 
-def animate_mode_2d_xyz(
+def animate_mode_xyz(
     mode: NormalMode,
     times: np.ndarray[Any, np.dtype[np.floating]] | None = None,
     idx: int = 0,
@@ -154,5 +155,5 @@ def animate_mode_2d_xyz(
     fig, ax = get_axis_3d(ax)
 
     times = times if times is not None else _get_default_times(mode)
-    artists = [plot_mode_2d_xyz(mode, time=t, idx=idx, ax=ax)[2] for t in times]
+    artists = [plot_mode_xyz(mode, time=t, idx=idx, ax=ax)[2] for t in times]
     return fig, ax, ArtistAnimation(fig, artists)

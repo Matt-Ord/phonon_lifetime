@@ -9,6 +9,7 @@ from phonon_lifetime.defect import (
 from phonon_lifetime.modes import (
     animate_mode_1d_x,
     plot_mode_1d_x,
+    repeat_mode,
 )
 from phonon_lifetime.pristine import PristineSystem
 
@@ -22,14 +23,14 @@ if __name__ == "__main__":
 
     vacancy_system = VacancySystem(
         pristine=system,
-        defect=VacancyDefect(defects=[]),
+        defect=VacancyDefect(defects=[0]),
     )
     mode = vacancy_system.get_mode(idx=203)
     fig, ax, _ = plot_mode_1d_x(mode)
     ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")
     fig.savefig("./examples/figures/1d_chain.vacancy_defect.mode.png", dpi=300)
 
-    fig, ax, anim = animate_mode_1d_x(mode)
+    fig, ax, anim = animate_mode_1d_x(repeat_mode(mode, n_repeats=(3, 1, 1)))
     ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")
     anim.save(
         "./examples/figures/1d_chain.vacancy_defect.mode_animation.gif",

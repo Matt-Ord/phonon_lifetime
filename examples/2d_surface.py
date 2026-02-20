@@ -3,7 +3,7 @@ import numpy as np
 
 from phonon_lifetime.modes import (
     animate_mode_2d_xy,
-    animate_mode_2d_xyz,
+    animate_mode_xyz,
     plot_mode_2d_xy,
 )
 from phonon_lifetime.pristine import PristineSystem, plot_dispersion_2d_xy
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         "./examples/figures/2d_surface.mode_animation.gif", dpi=300, writer="pillow"
     )
 
-    fig, ax, anim = animate_mode_2d_xyz(mode)
+    fig, ax, anim = animate_mode_xyz(mode)
     ax.view_init(elev=90, azim=0)  # View from above (90 degrees above the plane)
     anim.save(
         "./examples/figures/2d_surface.mode_3d_animation.above.gif",

@@ -6,7 +6,7 @@ import numpy as np
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from phonon_lifetime import System
+    from phonon_lifetime.system._system import System
 
 
 class NormalModes[S: System](ABC):

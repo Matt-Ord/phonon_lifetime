@@ -16,12 +16,20 @@
         "ndarray",
         "xlabel",
         "ylabel",
+        "zlabel",
         "pyproject",
         "scipy",
         "trange",
         "tqdm",
         "xlim",
-        "ylim"
+        "ylim",
+        "zlim",
+        "azim",
+        "mplot",
+        "sinc",
+        "xscale",
+        "yscale",
+        "zscale"
     ],
     "flagWords": [
         "hte",

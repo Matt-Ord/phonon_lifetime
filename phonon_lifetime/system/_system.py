@@ -47,6 +47,6 @@ class System(ABC):
     def get_modes(self) -> NormalModes[Self]:
         """Get the normal modes of the system."""
 
-    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> NormalMode[Self]:
-        """Get the normal mode for a given branch and q point."""
-        return self.get_modes().get_mode(branch=branch, q=q)
+    def get_mode(self, idx: int) -> NormalMode[Self]:
+        """Get the normal mode for a given index."""
+        return self.get_modes()[idx]

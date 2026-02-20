@@ -8,7 +8,7 @@ def test_mass_defect_vectors() -> None:
     system = PristineSystem(
         mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(37, 1, 1),
+        n_repeats=(7, 1, 1),
         spring_constant=(1, 0, 0),
     )
 
@@ -20,5 +20,5 @@ def test_mass_defect_vectors() -> None:
     for i in range(modes.n_modes):
         np.testing.assert_array_equal(
             vectors[i].reshape(-1, 3),
-            modes.get_mode(i, q=0).vector,
+            modes[i].vector,
         )

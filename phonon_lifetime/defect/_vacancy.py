@@ -36,12 +36,12 @@ class VacancyModes(NormalModes["VacancySystem"]):
     @property
     @override
     def vectors(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        defective_modes = self._modes.reshape(-1, 3, self.n_branch)
+        defective_modes = self._modes.reshape(-1, 3, self.n_modes)
 
-        out = np.zeros((self.system.n_atoms, 3, self.n_branch), dtype=np.complex128)
+        out = np.zeros((self.system.n_atoms, 3, self.n_modes), dtype=np.complex128)
         indices = np.delete(np.arange(self.system.n_atoms), self.system.defect.defects)
         out[indices] = defective_modes
-        return out.reshape(self.system.n_atoms * 3, self.n_branch).T
+        return out.reshape(self.system.n_atoms * 3, self.n_modes).T
 
     @property
     @override
@@ -50,24 +50,19 @@ class VacancyModes(NormalModes["VacancySystem"]):
 
     @property
     @override
-    def n_q(self) -> int:
-        return 1
-
-    @property
-    @override
-    def n_branch(self) -> int:
+    def n_modes(self) -> int:
         return self._omega.shape[0]
 
     @override
-    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> VacancyMode:
-        defective_vector = self._modes[:, branch].reshape(-1, 3)
+    def __getitem__(self, idx: int) -> VacancyMode:
+        defective_vector = self._modes[:, idx].reshape(-1, 3)
         vector = np.zeros((self.system.n_atoms, 3), dtype=np.complex128)
         indices = np.delete(np.arange(self.system.n_atoms), self.system.defect.defects)
         vector[indices] = defective_vector
 
         return VacancyMode(
             system=self._system,
-            omega=self._omega[branch],
+            omega=self._omega[idx],
             vector=vector,
         )
 

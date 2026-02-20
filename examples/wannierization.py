@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
 from phonon_lifetime.defect import (
@@ -28,4 +27,4 @@ if __name__ == "__main__":
     # The high-frequency modes are maybe not excited in the
     # real system - and we would therefore see a finite length scale in the Wannier vectors?
     fig, ax = plot_wannier_vector(modes, idx=0)
-    plt.savefig("./examples/figures/1d_chain.wannier_vector.png", dpi=300)
+    fig.savefig("./examples/figures/1d_chain.wannier_vector.png", dpi=300)

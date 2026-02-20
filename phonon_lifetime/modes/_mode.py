@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, override
 import numpy as np
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from phonon_lifetime import System
 
 
@@ -18,38 +20,29 @@ class NormalModes[S: System](ABC):
     @property
     def vectors(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
         """The vector of the mode, an (n_modes, n_atoms * 3) array."""
-        out = np.zeros(
-            (self.n_q, self.n_branch, self.system.n_atoms, 3), dtype=np.complex128
-        )
-        for iq in range(self.n_q):
-            for branch in range(self.n_branch):
-                mode = self.get_mode(branch=branch, q=iq)
-                out[iq, branch] = mode.vector
+        out = np.zeros((self.n_modes, self.system.n_atoms, 3), dtype=np.complex128)
+        for i in range(self.n_modes):
+            mode = self[i]
+            out[i] = mode.vector
         return out.reshape(self.n_modes, -1)
 
     @property
     @abstractmethod
-    def n_q(self) -> int:
-        """The number of q points in the calculation."""
-
-    @property
-    @abstractmethod
-    def n_branch(self) -> int:
-        """The number of branches in the calculation."""
-
-    @property
     def n_modes(self) -> int:
         """The number of modes in the calculation."""
-        return self.n_q * self.n_branch
 
     @property
     @abstractmethod
     def system(self) -> S:
         """The system that this normal mode belongs to."""
 
+    def __iter__(self) -> Iterator[NormalMode[S]]:
+        for i in range(self.n_modes):
+            yield self[i]
+
     @abstractmethod
-    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> NormalMode[S]:
-        """Select the normal mode for a given branch and q point."""
+    def __getitem__(self, idx: int) -> NormalMode[S]:
+        """Select the normal mode for a given index."""
 
     def as_canonical(self) -> CanonicalModes[S]:
         """Convert this mode to the canonical form."""
@@ -145,18 +138,13 @@ class CanonicalModes[S: System](NormalModes[S]):
 
     @property
     @override
-    def n_q(self) -> int:
-        return 1
-
-    @property
-    @override
-    def n_branch(self) -> int:
+    def n_modes(self) -> int:
         return self._omega.shape[0]
 
     @override
-    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> CanonicalMode[S]:
+    def __getitem__(self, idx: int) -> CanonicalMode[S]:
         return CanonicalMode(
             system=self._system,
-            omega=self._omega[branch],
-            vector=self._vectors[branch].reshape(-1, 3),
+            omega=self._omega[idx],
+            vector=self._vectors[idx].reshape(-1, 3),
         )

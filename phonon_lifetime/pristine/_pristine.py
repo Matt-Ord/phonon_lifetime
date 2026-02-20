@@ -62,6 +62,57 @@ class PristineMode(NormalMode["PristineSystem"]):
 
 
 @dataclass(kw_only=True, frozen=True)
+class PristineModesAtBranch(NormalModes["PristineSystem"]):
+    """Result of a normal mode calculation for a phonon system."""
+
+    _system: PristineSystem
+    _omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_q)
+    # modes with shape = (n_q, n_atoms * 3)
+    _modes: np.ndarray[Any, np.dtype[np.complex128]]
+    _q_vals: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_q, 3)
+
+    @property
+    @override
+    def omega(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        return self._omega
+
+    @property
+    @override
+    def system(self) -> PristineSystem:
+        return self._system
+
+    @property
+    def q_vals(self) -> np.ndarray[Any, np.dtype[np.floating]]:
+        """The q values for each mode, shape (n_q, 3)."""
+        # TODO: calculate this on the fly # noqa: FIX002
+        return self._q_vals
+
+    @property
+    def n_q(self) -> int:
+        return self._omega.shape[0]
+
+    @property
+    @override
+    def n_modes(self) -> int:
+        return self._omega.size
+
+    @override
+    def __getitem__(self, idx: int | tuple[int, int, int]) -> PristineMode:
+        idx = (
+            idx
+            if isinstance(idx, int)
+            else np.ravel_multi_index(idx, self.system.n_repeats).item()
+        )
+
+        return PristineMode(
+            _system=self._system,
+            _omega=self._omega[idx],
+            _primitive_vector=self._modes[idx, :],
+            _q=tuple(self._q_vals[idx, :]),
+        )
+
+
+@dataclass(kw_only=True, frozen=True)
 class PristineModes(NormalModes["PristineSystem"]):
     """Result of a normal mode calculation for a phonon system."""
 
@@ -74,7 +125,6 @@ class PristineModes(NormalModes["PristineSystem"]):
     @property
     @override
     def omega(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
-        """A np.array of frequencies for each mode."""
         return self._omega.reshape(-1)
 
     @property
@@ -89,18 +139,34 @@ class PristineModes(NormalModes["PristineSystem"]):
         return self._q_vals
 
     @property
-    @override
     def n_q(self) -> int:
+        """Number of q points."""
         return self._omega.shape[0]
 
     @property
-    @override
     def n_branch(self) -> int:
+        """Number of branches."""
         return self._omega.shape[1]
 
+    @property
     @override
-    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> PristineMode:
+    def n_modes(self) -> int:
+        return self.n_q * self.n_branch
 
+    @override
+    def __getitem__(self, idx: int) -> PristineMode:
+        iq = idx // self.n_branch
+        ib = idx % self.n_branch
+
+        return PristineMode(
+            _system=self._system,
+            _omega=self._omega[iq, ib],
+            _primitive_vector=self._modes[iq, :, ib],
+            _q=tuple(self._q_vals[iq, :]),
+        )
+
+    def select_mode(self, branch: int, q: int | tuple[int, int, int]) -> PristineMode:
+        """Select a mode by branch and q point."""
         iq = q if isinstance(q, int) else np.ravel_multi_index(q, self.system.n_repeats)
 
         return PristineMode(
@@ -110,9 +176,13 @@ class PristineModes(NormalModes["PristineSystem"]):
             _q=tuple(self._q_vals[iq, :]),
         )
 
-    def get_dispersion(self, branch: int) -> np.ndarray[Any, np.dtype[np.floating]]:
-        """Get the dispersion for a given branch."""
-        return self._omega[:, branch]
+    def at_branch(self, branch: int) -> PristineModesAtBranch:
+        return PristineModesAtBranch(
+            _system=self._system,
+            _omega=self._omega[:, branch],
+            _modes=self._modes[:, :, branch],
+            _q_vals=self._q_vals,
+        )
 
 
 class PristineSystem(System):

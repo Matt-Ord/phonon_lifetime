@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
 from phonon_lifetime.defect import (
@@ -25,10 +24,10 @@ if __name__ == "__main__":
         pristine=system,
         defect=VacancyDefect(defects=[]),
     )
-    mode = vacancy_system.get_mode(branch=203, q=(0, 0, 0))
+    mode = vacancy_system.get_mode(idx=203)
     fig, ax, _ = plot_mode_1d_x(mode)
     ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")
-    plt.savefig("./examples/figures/1d_chain.vacancy_defect.mode.png", dpi=300)
+    fig.savefig("./examples/figures/1d_chain.vacancy_defect.mode.png", dpi=300)
 
     fig, ax, anim = animate_mode_1d_x(mode)
     ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")
@@ -45,10 +44,10 @@ if __name__ == "__main__":
     # Branch 203 has the 0 atom stationary
     # Branch 204 the 0 mode moves, and this is a test of
     # us properly rescaling the mode displacements by the mass
-    mode = mass_defect_system.get_mode(branch=204, q=(0, 0, 0))
+    mode = mass_defect_system.get_mode(idx=204)
     fig, ax, _ = plot_mode_1d_x(mode)
     ax.set_title("Phonon Mode for 1D Chain with Mass Defect")
-    plt.savefig("./examples/figures/1d_chain.mass_defect.mode.png", dpi=300)
+    fig.savefig("./examples/figures/1d_chain.mass_defect.mode.png", dpi=300)
 
     fig, ax, anim = animate_mode_1d_x(mode)
     ax.set_title("Phonon Mode for 1D Chain with Mass Defect")

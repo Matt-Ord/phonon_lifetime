@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
 from phonon_lifetime.defect import VacancyDefect, VacancySystem
@@ -20,11 +19,11 @@ if __name__ == "__main__":
         pristine=pristine,
         defect=VacancyDefect(defects=[]),
     )
-    mode = vacancy_system.get_mode(branch=10, q=(0, 0, 0))
+    mode = vacancy_system.get_mode(idx=10)
 
     fig, ax, _ = plot_mode_2d_xy(mode)
     ax.set_title("Phonon Mode for 2D Surface")
-    plt.savefig("./examples/figures/2d_surface.defect.mode.0.png", dpi=300)
+    fig.savefig("./examples/figures/2d_surface.defect.mode.0.png", dpi=300)
 
     fig, ax, anim = animate_mode_2d_xy(mode)
     ax.set_title("Phonon Mode for 2D Surface")
@@ -38,11 +37,11 @@ if __name__ == "__main__":
         pristine=pristine,
         defect=VacancyDefect(defects=[0]),
     )
-    mode = vacancy_system.get_mode(branch=10, q=(0, 0, 0))
+    mode = vacancy_system.get_mode(idx=10)
 
     fig, ax, _ = plot_mode_2d_xy(mode)
     ax.set_title("Phonon Mode for 2D Surface")
-    plt.savefig("./examples/figures/2d_surface.defect.mode.1.png", dpi=300)
+    fig.savefig("./examples/figures/2d_surface.defect.mode.1.png", dpi=300)
 
     fig, ax, anim = animate_mode_2d_xy(mode)
     ax.set_title("Phonon Mode for 2D Surface")

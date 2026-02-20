@@ -44,20 +44,15 @@ class MassDefectModes(NormalModes["MassDefectSystem"]):
 
     @property
     @override
-    def n_q(self) -> int:
-        return 1
-
-    @property
-    @override
-    def n_branch(self) -> int:
+    def n_modes(self) -> int:
         return self._omega.shape[0]
 
     @override
-    def get_mode(self, branch: int, q: int | tuple[int, int, int]) -> MassDefectMode:
+    def __getitem__(self, idx: int) -> MassDefectMode:
         return MassDefectMode(
             system=self._system,
-            omega=self._omega[branch],
-            vector=self._modes[:, branch].reshape(-1, 3),
+            omega=self._omega[idx],
+            vector=self._modes[:, idx].reshape(-1, 3),
         )
 
 

@@ -8,7 +8,9 @@ from phonopy.structure.atoms import PhonopyAtoms
 from phonon_lifetime import System
 from phonon_lifetime.modes import CanonicalMode, NormalModes
 from phonon_lifetime.system import get_scaled_positions, get_supercell_cell
-from phonon_lifetime.system._util import get_pristine_force_matrix
+from phonon_lifetime.system._util import (
+    get_full_force_matrix,
+)
 
 if TYPE_CHECKING:
     from phonon_lifetime.pristine import PristineSystem
@@ -122,7 +124,7 @@ class MassDefectSystem(System):
             unitcell=cell, supercell_matrix=np.eye(3), primitive_matrix=np.eye(3)
         )
 
-        pristine_force_constants = get_pristine_force_matrix(self)
+        pristine_force_constants = get_full_force_matrix(self)
         phonon.force_constants = pristine_force_constants
 
         phonon.run_mesh((1, 1, 1), with_eigenvectors=True, is_mesh_symmetry=False)

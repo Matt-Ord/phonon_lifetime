@@ -8,7 +8,9 @@ from phonopy.structure.atoms import PhonopyAtoms
 from phonon_lifetime import System
 from phonon_lifetime.modes import CanonicalMode, NormalModes
 from phonon_lifetime.system import get_scaled_positions, get_supercell_cell
-from phonon_lifetime.system._util import get_pristine_force_matrix
+from phonon_lifetime.system._util import (
+    get_pristine_force_matrix,
+)
 
 if TYPE_CHECKING:
     from phonon_lifetime.pristine import PristineSystem

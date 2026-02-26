@@ -5,6 +5,7 @@ import pytest
 
 from phonon_lifetime.pristine import PristineSystem
 from phonon_lifetime.system._util import (  # noqa: PLC2701
+    get_full_force_matrix,
     get_pristine_force_matrix,
 )
 
@@ -60,9 +61,11 @@ def test_build_force_matrix_x() -> None:
         spring_constant=(1, 0, 0),
     )
 
-    actual = get_pristine_force_matrix(system)
+    actual = get_full_force_matrix(system)
     desired = _build_pristine_force_constant_matrix_slow(system)
     np.testing.assert_array_equal(actual, desired)
+    actual = get_pristine_force_matrix(system)
+    np.testing.assert_array_equal(actual, desired[0])
 
 
 @pytest.mark.filterwarnings("ignore:Even n_repeats ")
@@ -74,9 +77,11 @@ def test_build_force_matrix_y() -> None:
         spring_constant=(0, 1, 0),
     )
 
-    actual = get_pristine_force_matrix(system)
+    actual = get_full_force_matrix(system)
     desired = _build_pristine_force_constant_matrix_slow(system)
     np.testing.assert_array_equal(actual, desired)
+    actual = get_pristine_force_matrix(system)
+    np.testing.assert_array_equal(actual, desired[0])
 
 
 def test_build_force_matrix_y_flat() -> None:
@@ -87,9 +92,11 @@ def test_build_force_matrix_y_flat() -> None:
         spring_constant=(0, 1, 0),
     )
 
-    actual = get_pristine_force_matrix(system)
+    actual = get_full_force_matrix(system)
     desired = _build_pristine_force_constant_matrix_slow(system)
     np.testing.assert_array_equal(actual, desired)
+    actual = get_pristine_force_matrix(system)
+    np.testing.assert_array_equal(actual, desired[0])
 
 
 def test_build_force_matrix_explicit() -> None:
@@ -100,7 +107,7 @@ def test_build_force_matrix_explicit() -> None:
         spring_constant=(1, 0, 0),
     )
 
-    actual = get_pristine_force_matrix(system)
+    actual = get_full_force_matrix(system)
 
     np.testing.assert_array_equal(
         actual[:, :, 0, 0], np.array([[2, -1, -1], [-1, 2, -1], [-1, -1, 2]])

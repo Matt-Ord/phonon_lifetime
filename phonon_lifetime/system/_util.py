@@ -8,6 +8,42 @@ if TYPE_CHECKING:
 
 def get_pristine_force_matrix(
     system: System,
+) -> np.ndarray[tuple[int, int, int], np.dtype[np.float64]]:
+    """Get the pristine force constant matrix."""
+    nx, ny, nz = system.n_repeats
+    num_atoms = np.prod(system.n_repeats)
+    kx, ky, kz = system.spring_constant
+
+    # 3x3 stiffness tensors
+    phis = [
+        np.diag([kx, 0.0, 0.0]),  # X-direction
+        np.diag([0.0, ky, 0.0]),  # Y-direction
+        np.diag([0.0, 0.0, kz]),  # Z-direction
+    ]
+
+    # Initialize row for atom 0: (num_atoms, 3, 3)
+    row_fc = np.zeros((num_atoms, 3, 3), dtype=np.float64)
+    indices = np.arange(num_atoms).reshape((nx, ny, nz))
+
+    # Find neighbor indices specifically for the atom at (0,0,0)
+    # This is equivalent to seeing where '0' moved to after a roll
+    for axis, phi in enumerate(phis):
+        # Neighbor in positive direction
+        idx_p = np.roll(indices, shift=-1, axis=axis)[0, 0, 0]
+        row_fc[idx_p] -= phi
+
+        # Neighbor in negative direction
+        idx_m = np.roll(indices, shift=1, axis=axis)[0, 0, 0]
+        row_fc[idx_m] -= phi
+
+    # Acoustic Sum Rule: Self-interaction is the negative sum of all others
+    row_fc[0] -= np.sum(row_fc, axis=0)
+
+    return row_fc
+
+
+def get_full_force_matrix(
+    system: System,
 ) -> np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]:
     """Get the pristine force constant matrix."""
     nx, ny, nz = system.n_repeats
@@ -16,9 +52,11 @@ def get_pristine_force_matrix(
     # 1. Define the 3x3 stiffness tensors for each direction
     # If your spring_constant is (kx, ky, kz), these are diagonal
     kx, ky, kz = system.spring_constant
-    phi_x = np.diag([kx, 0.0, 0.0])  # Only X-displacements cause X-forces
-    phi_y = np.diag([0.0, ky, 0.0])
-    phi_z = np.diag([0.0, 0.0, kz])
+    phis = [
+        np.diag([kx, 0.0, 0.0]),  # X-direction
+        np.diag([0.0, ky, 0.0]),  # Y-direction
+        np.diag([0.0, 0.0, kz]),  # Z-direction
+    ]
 
     # Initialize FC matrix: (N_atoms, N_atoms, 3, 3)
     fc = np.zeros((num_atoms, num_atoms, 3, 3), dtype=np.float64)
@@ -29,7 +67,7 @@ def get_pristine_force_matrix(
 
     # 2. Fill Neighbor Interactions (Off-Diagonal)
     # We use np.roll to find neighbor indices across periodic boundaries
-    for axis, phi in enumerate([phi_x, phi_y, phi_z]):
+    for axis, phi in enumerate(phis):
         # Positive direction neighbor (+1)
         neighbors_p = np.roll(indices, shift=-1, axis=axis).ravel()
         fc[target_atoms, neighbors_p, :, :] -= phi

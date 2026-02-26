@@ -96,14 +96,16 @@ class PristineModesAtBranch(NormalModes["PristineSystem"]):
     def n_modes(self) -> int:
         return self._omega.size
 
-    @override
-    def __getitem__(self, idx: int | tuple[int, int, int]) -> PristineMode:
-        idx = (
-            idx
-            if isinstance(idx, int)
-            else np.ravel_multi_index(idx, self.system.n_repeats).item()
+    def get_mode_idx(self, q: int | tuple[int, int, int]) -> int:
+        """Get the index of a mode at a q point."""
+        return (
+            q
+            if isinstance(q, int)
+            else np.ravel_multi_index(q, self.system.n_repeats).item()
         )
 
+    @override
+    def __getitem__(self, idx: int) -> PristineMode:
         return PristineMode(
             _system=self._system,
             _omega=self._omega[idx],
@@ -165,16 +167,19 @@ class PristineModes(NormalModes["PristineSystem"]):
             _q=tuple(self._q_vals[iq, :]),
         )
 
+    def get_mode_idx(self, branch: int, q: int | tuple[int, int, int]) -> int:
+        """Get the index of a mode by branch and q point."""
+        iq = (
+            q
+            if isinstance(q, int)
+            else np.ravel_multi_index(q, self.system.n_repeats).item()
+        )
+        return iq * self.n_branch + branch
+
     def select_mode(self, branch: int, q: int | tuple[int, int, int]) -> PristineMode:
         """Select a mode by branch and q point."""
-        iq = q if isinstance(q, int) else np.ravel_multi_index(q, self.system.n_repeats)
-
-        return PristineMode(
-            _system=self._system,
-            _omega=self._omega[iq, branch],
-            _primitive_vector=self._modes[iq, :, branch],
-            _q=tuple(self._q_vals[iq, :]),
-        )
+        idx = self.get_mode_idx(branch, q)
+        return self[idx]
 
     def at_branch(self, branch: int) -> PristineModesAtBranch:
         return PristineModesAtBranch(
@@ -227,7 +232,7 @@ class PristineSystem(System):
 
     @property
     def mass(self) -> float:
-        """Mass of each atom in the system."""
+        """Mass of the atom in the system."""
         return self._mass
 
     @property
@@ -251,10 +256,12 @@ class PristineSystem(System):
                 supercell_matrix=np.diag(self.n_repeats),
             )
 
-        phonon.force_constants = get_pristine_force_matrix(self)
+        force_constants = get_pristine_force_matrix(self)
+        phonon.force_constants = force_constants.reshape(1, *force_constants.shape)
         phonon.run_mesh(self.n_repeats, with_eigenvectors=True, is_mesh_symmetry=False)
 
         mesh_dict = phonon.get_mesh_dict()
+
         return PristineModes(
             _system=self,
             _omega=mesh_dict["frequencies"] * 2 * np.pi,

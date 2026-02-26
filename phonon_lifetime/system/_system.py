@@ -37,7 +37,7 @@ class System(ABC):
     @property
     @abstractmethod
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
-        """Mass of each atom in the system."""
+        """Mass of every atom in the system."""
 
     @abstractmethod
     def as_pristine(self) -> PristineSystem:

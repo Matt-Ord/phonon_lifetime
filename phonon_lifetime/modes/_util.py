@@ -72,12 +72,17 @@ class RepeatSystem(System):
     def get_mode(self, idx: int) -> NormalMode[System]:
         return repeat_mode(self._system.get_mode(idx), n_repeats=self._n_repeats)
 
+    @property
+    def inner_system(self) -> System:
+        """The original system that is being repeated."""
+        return self._system
+
 
 def repeat_mode[S: System](
     mode: NormalMode[S], n_repeats: tuple[int, int, int]
 ) -> NormalMode[RepeatSystem]:
     """Repeat a mode to create a new mode for a larger system."""
-    vector = mode.vector.reshape(*mode.system.n_repeats, 3)
+    vector = mode.vector.reshape(*mode.system.n_repeats, 3).copy()
     vector /= np.prod(n_repeats) ** 0.5  # Normalize the mode
     new_vector = np.tile(vector, (*n_repeats, 1))
     new_vector = new_vector.reshape(-1, 3)
@@ -92,7 +97,7 @@ def repeat_modes[S: System](
     modes: NormalModes[S], n_repeats: tuple[int, int, int]
 ) -> NormalModes[RepeatSystem]:
     """Repeat a set of modes to create new modes for a larger system."""
-    vectors = modes.vectors.reshape(modes.n_modes, *modes.system.n_repeats, 3)
+    vectors = modes.vectors.reshape(modes.n_modes, *modes.system.n_repeats, 3).copy()
     vectors /= np.prod(n_repeats) ** 0.5  # Normalize the modes
     new_vectors = np.tile(vectors, (1, *n_repeats, 1))
     new_vectors = new_vectors.reshape(modes.n_modes, -1)

@@ -114,6 +114,31 @@ def plot_survival_probability(
     return fig, ax, line
 
 
+def plot_overlap_weights(
+    pristine: NormalModes,
+    defects: NormalModes,
+    pristine_idx: int,
+    *,
+    ax: Axes | None = None,
+) -> tuple[Figure, Axes, Line2D]:
+    """Plot the overlap weights of the pristine states after time t."""
+    fig, ax = get_axis(ax)
+    pristine_mode = pristine[pristine_idx]
+    pristine_omega = pristine_mode.omega
+    overlap = get_state_overlap(pristine_mode, defects)
+    weights = np.abs(overlap) ** 2
+
+    (line,) = ax.plot(defects.omega, weights)
+    line.set_marker("x")
+    ax.axvline(pristine_omega, linestyle="--", label="Pristine Frequency")
+
+    ax.set_title("Overlap Weights against defect frequency")
+    ax.set_xlabel("Defect Frequency")
+    ax.set_ylabel("Overlap Weight")
+    ax.set_ylim(0, None)
+    return fig, ax, line
+
+
 def calculate_decay_rates(
     pristine: NormalModes,
     defects: NormalModes,

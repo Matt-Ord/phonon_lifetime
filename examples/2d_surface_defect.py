@@ -10,7 +10,7 @@ from phonon_lifetime.modes import (
 from phonon_lifetime.pristine import PristineSystem
 
 if __name__ == "__main__":
-    pristine = PristineSystem(
+    pristine = PristineSystem.from_spring_constant(
         mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
         n_repeats=(3, 3, 1),

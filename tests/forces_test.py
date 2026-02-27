@@ -1,27 +1,19 @@
-from typing import TYPE_CHECKING
-
 import numpy as np
 import pytest
 
 from phonon_lifetime.pristine import PristineSystem
-from phonon_lifetime.system._util import (  # noqa: PLC2701
-    get_full_force_matrix,
-    get_pristine_force_matrix,
-)
-
-if TYPE_CHECKING:
-    from phonon_lifetime import System
 
 
 def _build_pristine_force_constant_matrix_slow(
-    system: System,
+    spring_constant: tuple[float, float, float],
+    n_repeats: tuple[int, int, int],
 ) -> np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]:
     """Get the pristine force constant matrix."""
-    nx, ny, nz = system.n_repeats
-    kx, ky, kz = system.spring_constant
+    nx, ny, nz = n_repeats
+    kx, ky, kz = spring_constant
 
     def idx(ix: int, iy: int, iz: int) -> int:
-        return np.ravel_multi_index((ix, iy, iz), system.n_repeats).item()
+        return np.ravel_multi_index((ix, iy, iz), n_repeats).item()
 
     # 1) pristine fc on full grid
     n = nx * ny * nz
@@ -54,60 +46,67 @@ def _build_pristine_force_constant_matrix_slow(
 
 
 def test_build_force_matrix_x() -> None:
-    system = PristineSystem(
+    spring_constant = (1, 0, 0)
+    n_repeats = (37, 1, 1)
+    system = PristineSystem.from_spring_constant(
         mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(37, 1, 1),
-        spring_constant=(1, 0, 0),
+        n_repeats=n_repeats,
+        spring_constant=spring_constant,
     )
 
-    actual = get_full_force_matrix(system)
-    desired = _build_pristine_force_constant_matrix_slow(system)
+    actual = system.forces
+    desired = _build_pristine_force_constant_matrix_slow(spring_constant, n_repeats)
     np.testing.assert_array_equal(actual, desired)
-    actual = get_pristine_force_matrix(system)
+    actual = system.pristine_forces
     np.testing.assert_array_equal(actual, desired[0])
 
 
 @pytest.mark.filterwarnings("ignore:Even n_repeats ")
 def test_build_force_matrix_y() -> None:
-    system = PristineSystem(
+    n_repeats = (37, 2, 1)
+    spring_constant = (0, 1, 0)
+    system = PristineSystem.from_spring_constant(
         mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(37, 2, 1),
-        spring_constant=(0, 1, 0),
+        n_repeats=n_repeats,
+        spring_constant=spring_constant,
     )
 
-    actual = get_full_force_matrix(system)
-    desired = _build_pristine_force_constant_matrix_slow(system)
+    actual = system.forces
+    desired = _build_pristine_force_constant_matrix_slow(spring_constant, n_repeats)
     np.testing.assert_array_equal(actual, desired)
-    actual = get_pristine_force_matrix(system)
+    actual = system.pristine_forces
     np.testing.assert_array_equal(actual, desired[0])
 
 
 def test_build_force_matrix_y_flat() -> None:
-    system = PristineSystem(
+    n_repeats = (37, 1, 1)
+    spring_constant = (0, 1, 0)
+
+    system = PristineSystem.from_spring_constant(
         mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(37, 1, 1),
-        spring_constant=(0, 1, 0),
+        n_repeats=n_repeats,
+        spring_constant=spring_constant,
     )
 
-    actual = get_full_force_matrix(system)
-    desired = _build_pristine_force_constant_matrix_slow(system)
+    actual = system.forces
+    desired = _build_pristine_force_constant_matrix_slow(spring_constant, n_repeats)
     np.testing.assert_array_equal(actual, desired)
-    actual = get_pristine_force_matrix(system)
+    actual = system.pristine_forces
     np.testing.assert_array_equal(actual, desired[0])
 
 
 def test_build_force_matrix_explicit() -> None:
-    system = PristineSystem(
+    system = PristineSystem.from_spring_constant(
         mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
         n_repeats=(3, 1, 1),
         spring_constant=(1, 0, 0),
     )
 
-    actual = get_full_force_matrix(system)
+    actual = system.forces
 
     np.testing.assert_array_equal(
         actual[:, :, 0, 0], np.array([[2, -1, -1], [-1, 2, -1], [-1, -1, 2]])

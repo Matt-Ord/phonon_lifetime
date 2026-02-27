@@ -1,15 +1,19 @@
 import warnings
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, override
+from typing import Any, Literal, override
 
 import numpy as np
 from phonopy.api_phonopy import Phonopy
 from phonopy.structure.atoms import PhonopyAtoms
 
 from phonon_lifetime.modes._mode import NormalMode, NormalModes
+from phonon_lifetime.pristine._util import (
+    full_forces_from_stiffness_tensor,
+    pristine_forces_from_stiffness_tensor,
+    stiffness_from_spring_constant,
+)
 from phonon_lifetime.system._system import System
-from phonon_lifetime.system._util import get_pristine_force_matrix
 
 
 def get_crystal_phases(
@@ -199,12 +203,14 @@ class PristineSystem(System):
         mass: float,
         primitive_cell: np.ndarray[tuple[int, int], np.dtype[np.floating]],
         n_repeats: tuple[int, int, int],
-        spring_constant: tuple[float, float, float],
+        stiffness_tensor: np.ndarray[
+            tuple[Literal[3], Literal[3], Literal[3]], np.dtype[np.float64]
+        ],
     ) -> None:
         self._mass = mass
         self._primitive_cell = primitive_cell
         self._n_repeats = n_repeats
-        self._spring_constant = spring_constant
+        self._stiffness_tensor = stiffness_tensor
 
         assert self.primitive_cell.shape == (3, 3), (
             "Primitive cell should be a 3x3 array of lattice vectors."
@@ -215,15 +221,49 @@ class PristineSystem(System):
                 stacklevel=2,
             )
 
+    @staticmethod
+    def from_spring_constant(
+        mass: float,
+        primitive_cell: np.ndarray[tuple[int, int], np.dtype[np.floating]],
+        n_repeats: tuple[int, int, int],
+        spring_constant: tuple[float, float, float],
+    ) -> PristineSystem:
+        """Create a PristineSystem from a spring constant."""
+        return PristineSystem(
+            mass=mass,
+            primitive_cell=primitive_cell,
+            n_repeats=n_repeats,
+            stiffness_tensor=stiffness_from_spring_constant(spring_constant),
+        )
+
     @property
     @override
     def primitive_cell(self) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
         return self._primitive_cell
 
     @property
+    def stiffness_tensor(
+        self,
+    ) -> np.ndarray[tuple[Literal[3], Literal[3], Literal[3]], np.dtype[np.float64]]:
+        """The stiffness tensor of the system."""
+        return self._stiffness_tensor
+
+    @property
+    def pristine_forces(
+        self,
+    ) -> np.ndarray[tuple[int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+        return pristine_forces_from_stiffness_tensor(
+            self._stiffness_tensor, self._n_repeats
+        )
+
+    @property
     @override
-    def spring_constant(self) -> tuple[float, float, float]:
-        return self._spring_constant
+    def forces(
+        self,
+    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+        return full_forces_from_stiffness_tensor(
+            self._stiffness_tensor, self._n_repeats
+        )
 
     @property
     @override
@@ -256,11 +296,22 @@ class PristineSystem(System):
                 supercell_matrix=np.diag(self.n_repeats),
             )
 
-        force_constants = get_pristine_force_matrix(self)
+        force_constants = self.pristine_forces
         phonon.force_constants = force_constants.reshape(1, *force_constants.shape)
         phonon.run_mesh(self.n_repeats, with_eigenvectors=True, is_mesh_symmetry=False)
 
         mesh_dict = phonon.get_mesh_dict()
+
+        #         thm = TetrahedronMesh(
+        #     cell=cell,
+        #     frequencies=frequencies,
+        #     mesh=mesh_numbers,
+        #     grid_address=grid_address,
+        #     grid_mapping_table=grid_mapping_table,
+        #     ir_grid_points=ir_grid_points
+        # )
+        #         thm.set()
+        #         thm.get_integration_weights()
 
         return PristineModes(
             _system=self,

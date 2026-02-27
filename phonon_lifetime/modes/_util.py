@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, Literal, override
 
 import numpy as np
 
@@ -45,8 +45,10 @@ class RepeatSystem(System):
 
     @property
     @override
-    def spring_constant(self) -> tuple[float, float, float]:
-        return self._system.spring_constant
+    def forces(
+        self,
+    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+        return self._system.forces
 
     @property
     @override
@@ -61,7 +63,7 @@ class RepeatSystem(System):
             mass=self._system.as_pristine().mass,
             primitive_cell=self.primitive_cell,
             n_repeats=self.n_repeats,
-            spring_constant=self.spring_constant,
+            stiffness_tensor=self._system.as_pristine().stiffness_tensor,
         )
 
     @override

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, Literal, override
 
 import numpy as np
 from phonopy.api_phonopy import Phonopy
@@ -8,9 +8,6 @@ from phonopy.structure.atoms import PhonopyAtoms
 from phonon_lifetime import System
 from phonon_lifetime.modes import CanonicalMode, NormalModes
 from phonon_lifetime.system import get_scaled_positions, get_supercell_cell
-from phonon_lifetime.system._util import (
-    get_pristine_force_matrix,
-)
 
 if TYPE_CHECKING:
     from phonon_lifetime.pristine import PristineSystem
@@ -100,8 +97,13 @@ class VacancySystem(System):
 
     @property
     @override
-    def spring_constant(self) -> tuple[float, float, float]:
-        return self._pristine.spring_constant
+    def forces(
+        self,
+    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+        full_forces = self._pristine.forces
+        full_forces[self.defect.defects] = 0
+        full_forces[:, self.defect.defects] = 0
+        return full_forces
 
     @property
     @override
@@ -134,7 +136,7 @@ class VacancySystem(System):
             unitcell=cell, supercell_matrix=np.eye(3), primitive_matrix=np.eye(3)
         )
 
-        pristine_force_constants = get_pristine_force_matrix(self)
+        pristine_force_constants = self.forces
         phonon.force_constants = np.delete(
             np.delete(pristine_force_constants, vacancy, axis=0), vacancy, axis=1
         )

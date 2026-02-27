@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Literal, Self
 
 import numpy as np
 
@@ -21,8 +21,10 @@ class System(ABC):
 
     @property
     @abstractmethod
-    def spring_constant(self) -> tuple[float, float, float]:
-        """Spring constant for each direction (kx, ky, kz)."""
+    def forces(
+        self,
+    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+        """Force constant matrix for the system."""
 
     @property
     @abstractmethod

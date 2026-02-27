@@ -9,7 +9,7 @@ from phonon_lifetime.modes import (
 from phonon_lifetime.pristine import PristineSystem, plot_dispersion_2d_xy
 
 if __name__ == "__main__":
-    system = PristineSystem(
+    system = PristineSystem.from_spring_constant(
         mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
         n_repeats=(11, 11, 1),

@@ -17,18 +17,18 @@ def stiffness_from_spring_constant(
     )
 
 
-def pristine_forces_from_stiffness_tensor(
+def pristine_forces_from_stiffness_tensor_square(
     stiffness: np.ndarray[
         tuple[Literal[3], Literal[3], Literal[3]], np.dtype[np.float64]
     ],
     n_repeats: tuple[int, int, int],
-) -> np.ndarray[tuple[int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
     """Get the pristine force constant matrix."""
     nx, ny, nz = n_repeats
     num_atoms = np.prod(n_repeats)
 
     # Initialize row for atom 0: (num_atoms, 3, 3)
-    row_fc = np.zeros((num_atoms, 3, 3), dtype=np.float64)
+    row_fc = np.zeros((1, num_atoms, 3, 3), dtype=np.float64)
     indices = np.arange(num_atoms).reshape((nx, ny, nz))
 
     # Find neighbor indices specifically for the atom at (0,0,0)
@@ -36,19 +36,19 @@ def pristine_forces_from_stiffness_tensor(
     for axis, phi in enumerate(stiffness):
         # Neighbor in positive direction
         idx_p = np.roll(indices, shift=-1, axis=axis)[0, 0, 0]
-        row_fc[idx_p] -= phi
+        row_fc[0, idx_p] -= phi
 
         # Neighbor in negative direction
         idx_m = np.roll(indices, shift=1, axis=axis)[0, 0, 0]
-        row_fc[idx_m] -= phi
+        row_fc[0, idx_m] -= phi
 
     # Acoustic Sum Rule: Self-interaction is the negative sum of all others
-    row_fc[0] -= np.sum(row_fc, axis=0)
+    row_fc[0, 0] -= np.sum(row_fc[0], axis=0)
 
     return row_fc
 
 
-def full_forces_from_stiffness_tensor(
+def full_forces_from_stiffness_tensor_square(
     stiffness: np.ndarray[
         tuple[Literal[3], Literal[3], Literal[3]], np.dtype[np.float64]
     ],

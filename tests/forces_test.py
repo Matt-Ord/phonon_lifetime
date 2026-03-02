@@ -59,7 +59,7 @@ def test_build_force_matrix_x() -> None:
     desired = _build_pristine_force_constant_matrix_slow(spring_constant, n_repeats)
     np.testing.assert_array_equal(actual, desired)
     actual = system.pristine_forces
-    np.testing.assert_array_equal(actual, desired[0])
+    np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
 
 
 @pytest.mark.filterwarnings("ignore:Even n_repeats ")
@@ -77,7 +77,7 @@ def test_build_force_matrix_y() -> None:
     desired = _build_pristine_force_constant_matrix_slow(spring_constant, n_repeats)
     np.testing.assert_array_equal(actual, desired)
     actual = system.pristine_forces
-    np.testing.assert_array_equal(actual, desired[0])
+    np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
 
 
 def test_build_force_matrix_y_flat() -> None:
@@ -95,7 +95,7 @@ def test_build_force_matrix_y_flat() -> None:
     desired = _build_pristine_force_constant_matrix_slow(spring_constant, n_repeats)
     np.testing.assert_array_equal(actual, desired)
     actual = system.pristine_forces
-    np.testing.assert_array_equal(actual, desired[0])
+    np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
 
 
 def test_build_force_matrix_explicit() -> None:

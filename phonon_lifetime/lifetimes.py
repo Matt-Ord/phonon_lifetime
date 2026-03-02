@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from matplotlib.lines import Line2D
 
     from phonon_lifetime.modes import NormalMode, NormalModes
+    from phonon_lifetime.pristine import PristineModes
 
 
 def get_state_overlap_matrix(
@@ -121,20 +122,102 @@ def plot_overlap_weights(
     *,
     ax: Axes | None = None,
 ) -> tuple[Figure, Axes, Line2D]:
-    """Plot the overlap weights of the pristine states after time t."""
+    r"""Plot the overlap weights of a pristine state with the defect states against the defect frequencies.
+
+    for a pristine state |psi_i>, the overlap weight with a defect mode k is given by
+    $W_(omega_k)^i = |<\bar{psi}_k|psi_i>|^2$ where omega_k is the frequency of the defect mode k.
+
+    """
     fig, ax = get_axis(ax)
     pristine_mode = pristine[pristine_idx]
-    pristine_omega = pristine_mode.omega
     overlap = get_state_overlap(pristine_mode, defects)
     weights = np.abs(overlap) ** 2
 
     (line,) = ax.plot(defects.omega, weights)
     line.set_marker("x")
-    ax.axvline(pristine_omega, linestyle="--", label="Pristine Frequency")
+    ax.axvline(pristine_mode.omega, linestyle="--", label="Pristine Frequency")
 
     ax.set_title("Overlap Weights against defect frequency")
     ax.set_xlabel("Defect Frequency")
     ax.set_ylabel("Overlap Weight")
+    ax.set_ylim(0, None)
+    return fig, ax, line
+
+
+def get_first_order_scatter(
+    pristine: NormalModes,
+    defects: NormalModes,
+) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
+    """Calculate the first-order scattering matrix element <p_k|V|p_i>."""
+    # overlap are W_ki = <\bar{psi}_k| |psi_i>
+    # Scatter is the matrix element <\bar{psi}_k|V|p_i> = sum_j W_kj * omega_k (if we ignore k=i)
+    overlap = get_state_overlap_matrix(pristine, defects)
+    scatter = np.einsum("ki,k->ki", overlap, defects.omega)
+    return np.einsum("kf,ki->fi", overlap.conj(), scatter)
+
+
+def plot_first_order_scatter(
+    pristine: NormalModes,
+    defects: NormalModes,
+    pristine_idx: int,
+    *,
+    ax: Axes | None = None,
+) -> tuple[Figure, Axes, Line2D]:
+    r"""Plot the first-order scattering matrix element <p_k|V|p_i> against the defect frequencies.
+
+    for a pristine state |psi_i>, the first-order scattering with a defect mode k is given by
+    $S_(omega_k)^i = |<\bar{psi}_k|V|psi_i>|^2$ where omega_k is the frequency of the defect mode k.
+
+    """
+    fig, ax = get_axis(ax)
+
+    scatter = get_first_order_scatter(pristine, defects)
+    weights = np.abs(scatter[:, pristine_idx])
+
+    (line,) = ax.plot(pristine.omega, weights)
+    line.set_marker("x")
+    ax.axvline(pristine[pristine_idx].omega, linestyle="--", label="Pristine Frequency")
+
+    ax.set_title("First-order Scattering against defect frequency")
+    ax.set_xlabel("State Frequency")
+    ax.set_ylabel("Scattering Strength")
+    ax.set_ylim(0, None)
+    return fig, ax, line
+
+
+def plot_first_order_scatter_against_qx(
+    pristine: PristineModes,
+    defects: NormalModes,
+    pristine_idx: int,
+    *,
+    ax: Axes | None = None,
+) -> tuple[Figure, Axes, Line2D]:
+    r"""Plot the first-order scattering matrix element <p_k|V|p_i> against the defect frequencies.
+
+    for a pristine state |psi_i>, the first-order scattering with a defect mode k is given by
+    $S_(omega_k)^i = |<\bar{psi}_k|V|psi_i>|^2$ where omega_k is the frequency of the defect mode k.
+
+    """
+    fig, ax = get_axis(ax)
+
+    scatter = get_first_order_scatter(pristine, defects)
+    weights = np.abs(scatter[:, pristine_idx])
+
+    for band in range(pristine.n_branch):
+        band_indices = pristine.get_mode_idx(branch=band)
+        (line,) = ax.plot(
+            np.fft.fftshift(pristine.q_vals[:, 0]),
+            np.fft.fftshift(weights[band_indices]),
+        )
+        line.set_marker("x")
+
+    ax.axvline(
+        pristine[pristine_idx].q_val[0], linestyle="--", label="Pristine Frequency"
+    )
+
+    ax.set_title("First-order Scattering against qx")
+    ax.set_xlabel("State Frequency")
+    ax.set_ylabel("Scattering Strength")
     ax.set_ylim(0, None)
     return fig, ax, line
 
@@ -154,11 +237,8 @@ def calculate_decay_rates(
     delta function enforcing energy conservation.
 
     """
-    # overlap are W_ki = <\bar{psi}_k| |psi_i>
-    # Scatter is the matrix element <\bar{psi}_k|V|p_i> = sum_j W_kj * omega_k (if we ignore k=i)
-    overlap = get_state_overlap_matrix(pristine, defects)
-    scatter = np.einsum("ki,k->ki", overlap, defects.omega)
-    pristine_scatter = np.abs(np.einsum("kf,ki->fi", scatter.conj(), scatter)) ** 2
+    # First order scatter is <p_k|V|p_i>
+    pristine_scatter = np.abs(get_first_order_scatter(pristine, defects)) ** 2
 
     delta_omega = pristine.omega[:, np.newaxis] - pristine.omega[np.newaxis, :]
     energy_weight = np.sinc(0.5 * (delta_omega) * time) ** 2

@@ -29,7 +29,9 @@
         "sinc",
         "xscale",
         "yscale",
-        "zscale"
+        "zscale",
+        "axvline",
+        "fftshift"
     ],
     "flagWords": [
         "hte",

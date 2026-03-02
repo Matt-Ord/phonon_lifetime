@@ -7,10 +7,7 @@ from phonopy.structure.atoms import PhonopyAtoms
 
 from phonon_lifetime import System
 from phonon_lifetime.modes import CanonicalMode, NormalModes
-from phonon_lifetime.system import (
-    get_scaled_positions,
-    get_supercell_cell,
-)
+from phonon_lifetime.system import get_atom_supercell_fractions, get_supercell_cell
 
 if TYPE_CHECKING:
     from phonon_lifetime.pristine import PristineSystem
@@ -113,13 +110,12 @@ class MassDefectSystem(System):
 
     @override
     def get_modes(self) -> MassDefectModes:
-        all_positions = get_scaled_positions(self)
 
         cell = PhonopyAtoms(
             symbols=["C"] * self.n_atoms,
             masses=self.masses,
             cell=get_supercell_cell(self),
-            scaled_positions=all_positions,
+            scaled_positions=get_atom_supercell_fractions(self),
         )
 
         phonon = Phonopy(
@@ -138,3 +134,13 @@ class MassDefectSystem(System):
             _omega=mesh_dict["frequencies"][0] * 2 * np.pi,
             _modes=mesh_dict["eigenvectors"][0],
         )
+
+    @property
+    def n_primitive_atoms(self) -> int:
+        return self._pristine.n_primitive_atoms
+
+    @property
+    def primitive_atom_fractions(
+        self,
+    ) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
+        return self._pristine.primitive_atom_fractions

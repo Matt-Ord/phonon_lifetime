@@ -24,7 +24,10 @@ class System(ABC):
     def forces(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        """Force constant matrix for the system."""
+        """Force constant matrix for the system.
+
+        Forces[i, j, alpha, beta] is the force constant between the i'th and j'th atom in the system, for each pair of cartesian directions (alpha, beta).
+        """
 
     @property
     @abstractmethod
@@ -32,9 +35,24 @@ class System(ABC):
         """Number of repeats of the primitive cell in each direction (nx, ny, nz)."""
 
     @property
+    @abstractmethod
+    def n_primitive_atoms(self) -> int:
+        """Number of atoms in the primitive cell."""
+
+    @property
+    @abstractmethod
+    def primitive_atom_fractions(
+        self,
+    ) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
+        """The positions of the atoms as a fraction of the primitive cell.
+
+        primitive_atom_positions[i] is the position (x, y, z) of the i'th atom in the primitive cell.
+        """
+
+    @property
     def n_atoms(self) -> int:
         """Number of atoms in the system."""
-        return np.prod(self.n_repeats).item()
+        return np.prod(self.n_repeats).item() * self.n_primitive_atoms
 
     @property
     @abstractmethod

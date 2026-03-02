@@ -9,8 +9,7 @@ from phonopy.structure.atoms import PhonopyAtoms
 
 from phonon_lifetime.modes._mode import NormalMode, NormalModes
 from phonon_lifetime.pristine._util import (
-    full_forces_from_stiffness_tensor,
-    pristine_forces_from_stiffness_tensor,
+    full_forces_from_stiffness_tensor_square,
     stiffness_from_spring_constant,
 )
 from phonon_lifetime.system._system import System
@@ -227,15 +226,17 @@ class PristineSystem(System):
         *,
         mass: float,
         primitive_cell: np.ndarray[tuple[int, int], np.dtype[np.floating]],
+        primitive_atom_fractions: np.ndarray[tuple[int, int], np.dtype[np.floating]],
         n_repeats: tuple[int, int, int],
-        stiffness_tensor: np.ndarray[
-            tuple[Literal[3], Literal[3], Literal[3]], np.dtype[np.float64]
+        forces: np.ndarray[  # TODO: only store pristine forces? # noqa: FIX002
+            tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]
         ],
     ) -> None:
         self._mass = mass
         self._primitive_cell = primitive_cell
+        self._primitive_atom_fractions = primitive_atom_fractions
         self._n_repeats = n_repeats
-        self._stiffness_tensor = stiffness_tensor
+        self._forces = forces
 
         assert self.primitive_cell.shape == (3, 3), (
             "Primitive cell should be a 3x3 array of lattice vectors."
@@ -254,11 +255,16 @@ class PristineSystem(System):
         spring_constant: tuple[float, float, float],
     ) -> PristineSystem:
         """Create a PristineSystem from a spring constant."""
+        stiffness_tensor = stiffness_from_spring_constant(spring_constant)
+
         return PristineSystem(
             mass=mass,
             primitive_cell=primitive_cell,
+            primitive_atom_fractions=np.array([[0.0, 0.0, 0.0]]),
             n_repeats=n_repeats,
-            stiffness_tensor=stiffness_from_spring_constant(spring_constant),
+            forces=full_forces_from_stiffness_tensor_square(
+                stiffness_tensor, n_repeats
+            ),
         )
 
     @property
@@ -267,28 +273,17 @@ class PristineSystem(System):
         return self._primitive_cell
 
     @property
-    def stiffness_tensor(
-        self,
-    ) -> np.ndarray[tuple[Literal[3], Literal[3], Literal[3]], np.dtype[np.float64]]:
-        """The stiffness tensor of the system."""
-        return self._stiffness_tensor
-
-    @property
     def pristine_forces(
         self,
-    ) -> np.ndarray[tuple[int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        return pristine_forces_from_stiffness_tensor(
-            self._stiffness_tensor, self._n_repeats
-        )
+    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+        return self._forces[np.arange(self.n_primitive_atoms)]
 
     @property
     @override
     def forces(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        return full_forces_from_stiffness_tensor(
-            self._stiffness_tensor, self._n_repeats
-        )
+        return self._forces
 
     @property
     @override
@@ -305,13 +300,25 @@ class PristineSystem(System):
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
         return np.full(self.n_atoms, self.mass).astype(np.float64)
 
+    @property
+    @override
+    def n_primitive_atoms(self) -> int:
+        return 1
+
+    @property
+    @override
+    def primitive_atom_fractions(
+        self,
+    ) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
+        return self._primitive_atom_fractions
+
     @override
     def get_modes(self) -> PristineModes:
         cell = PhonopyAtoms(
-            symbols=["C"],
-            masses=[self.mass],
+            symbols=["C"] * self.n_primitive_atoms,
+            masses=[self.mass] * self.n_primitive_atoms,
             cell=self.primitive_cell,
-            scaled_positions=[[0.0, 0.0, 0.0]],
+            scaled_positions=self.primitive_atom_fractions,
         )
 
         with warnings.catch_warnings():

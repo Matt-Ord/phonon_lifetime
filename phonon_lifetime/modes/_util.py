@@ -63,7 +63,8 @@ class RepeatSystem(System):
             mass=self._system.as_pristine().mass,
             primitive_cell=self.primitive_cell,
             n_repeats=self.n_repeats,
-            stiffness_tensor=self._system.as_pristine().stiffness_tensor,
+            primitive_atom_fractions=self._system.as_pristine().primitive_atom_fractions,
+            forces=self._system.as_pristine().forces,
         )
 
     @override
@@ -78,6 +79,16 @@ class RepeatSystem(System):
     def inner_system(self) -> System:
         """The original system that is being repeated."""
         return self._system
+
+    @property
+    def n_primitive_atoms(self) -> int:
+        return self._system.n_primitive_atoms
+
+    @property
+    def primitive_atom_fractions(
+        self,
+    ) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
+        return self._system.primitive_atom_fractions
 
 
 def repeat_mode[S: System](

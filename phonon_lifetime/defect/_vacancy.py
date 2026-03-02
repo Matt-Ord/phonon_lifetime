@@ -7,7 +7,10 @@ from phonopy.structure.atoms import PhonopyAtoms
 
 from phonon_lifetime import System
 from phonon_lifetime.modes import CanonicalMode, NormalModes
-from phonon_lifetime.system import get_scaled_positions, get_supercell_cell
+from phonon_lifetime.system import (
+    get_atom_supercell_fractions,
+    get_supercell_cell,
+)
 
 if TYPE_CHECKING:
     from phonon_lifetime.pristine import PristineSystem
@@ -123,7 +126,7 @@ class VacancySystem(System):
     def get_modes(self) -> VacancyModes:
         vacancy = self.defect.defects
         n_simulation_atoms = self.n_atoms - len(vacancy)
-        all_positions = get_scaled_positions(self)
+        all_positions = get_atom_supercell_fractions(self)
 
         cell = PhonopyAtoms(
             symbols=["C"] * n_simulation_atoms,
@@ -150,3 +153,13 @@ class VacancySystem(System):
             _omega=mesh_dict["frequencies"][0] * 2 * np.pi,
             _modes=mesh_dict["eigenvectors"][0],
         )
+
+    @property
+    def n_primitive_atoms(self) -> int:
+        return self._pristine.n_primitive_atoms
+
+    @property
+    def primitive_atom_fractions(
+        self,
+    ) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
+        return self._pristine.primitive_atom_fractions

@@ -1,7 +1,7 @@
 import warnings
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Literal, override
+from typing import Any, Literal, overload, override
 
 import numpy as np
 from phonopy.api_phonopy import Phonopy
@@ -42,6 +42,10 @@ class PristineMode(NormalMode["PristineSystem"]):
     """Eigenvector of that mode."""
     _q: tuple[float, float, float]
     """Wave vector for this mode."""
+
+    @property
+    def q_val(self) -> tuple[float, float, float]:
+        return self._q
 
     @property
     @override
@@ -108,6 +112,15 @@ class PristineModesAtBranch(NormalModes["PristineSystem"]):
             else np.ravel_multi_index(q, self.system.n_repeats).item()
         )
 
+    def as_full(self) -> PristineModes:
+        """Convert to PristineModes by adding back the branch dimension."""
+        return PristineModes(
+            _system=self._system,
+            _omega=self._omega[:, None],
+            _modes=self._modes[:, :, None],
+            _q_vals=self._q_vals,
+        )
+
     @override
     def __getitem__(self, idx: int) -> PristineMode:
         return PristineMode(
@@ -171,8 +184,20 @@ class PristineModes(NormalModes["PristineSystem"]):
             _q=tuple(self._q_vals[iq, :]),
         )
 
-    def get_mode_idx(self, branch: int, q: int | tuple[int, int, int]) -> int:
+    @overload
+    def get_mode_idx(self, branch: int, q: int | tuple[int, int, int]) -> int: ...
+
+    @overload
+    def get_mode_idx(
+        self, branch: int, q: None = None
+    ) -> np.ndarray[tuple[int], np.dtype[np.int64]]: ...
+
+    def get_mode_idx(
+        self, branch: int, q: int | tuple[int, int, int] | None = None
+    ) -> int | np.ndarray[tuple[int], np.dtype[np.int64]]:
         """Get the index of a mode by branch and q point."""
+        if q is None:
+            return np.arange(self.n_q) * self.n_branch + branch
         iq = (
             q
             if isinstance(q, int)
@@ -301,17 +326,6 @@ class PristineSystem(System):
         phonon.run_mesh(self.n_repeats, with_eigenvectors=True, is_mesh_symmetry=False)
 
         mesh_dict = phonon.get_mesh_dict()
-
-        #         thm = TetrahedronMesh(
-        #     cell=cell,
-        #     frequencies=frequencies,
-        #     mesh=mesh_numbers,
-        #     grid_address=grid_address,
-        #     grid_mapping_table=grid_mapping_table,
-        #     ir_grid_points=ir_grid_points
-        # )
-        #         thm.set()
-        #         thm.get_integration_weights()
 
         return PristineModes(
             _system=self,

@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 from phonon_lifetime.defect import MassDefect, MassDefectSystem
 from phonon_lifetime.lifetimes import (
     calculate_decay_rates,
+    plot_first_order_scatter,
+    plot_first_order_scatter_against_qx,
     plot_overlap_weights,
     plot_survival_probability,
 )
@@ -13,15 +15,14 @@ if __name__ == "__main__":
     system = PristineSystem.from_spring_constant(
         mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(101, 1, 1),
+        n_repeats=(25, 1, 1),
         spring_constant=(1, 0.0, 0.0),
     )
-
     pristine_modes = system.get_modes().at_branch(2)
-    mode_idx = pristine_modes.get_mode_idx(q=(17, 0, 0))
+    mode_idx = pristine_modes.get_mode_idx(q=(5, 0, 0))
 
     fig, ax = plt.subplots()
-    times = np.linspace(0, 200, 500)
+    times = np.linspace(0, 20, 500)
 
     def _decay_fn(
         t: np.ndarray[tuple[int], np.dtype[np.float64]], *, rate: float
@@ -48,7 +49,7 @@ if __name__ == "__main__":
     fig.savefig("./examples/figures/survival.against_mass.png", dpi=300)
 
     # If we plot the rate against time, it eventually converges to a constant value.
-    defect = MassDefectSystem(pristine=system, defect=MassDefect(defects=[(12, 0)]))
+    defect = MassDefectSystem(pristine=system, defect=MassDefect(defects=[(50, 0)]))
     defect_modes = defect.get_modes()
     times = np.linspace(0, times[-1] * 10, 50)[1:]
     rates = [
@@ -66,3 +67,15 @@ if __name__ == "__main__":
     )
     ax.set_title("Overlap Weights of Defect Modes")
     fig.savefig("./examples/figures/survival.overlap_weights.png", dpi=300)
+
+    fig, ax, line = plot_first_order_scatter(
+        pristine_modes, defect_modes, pristine_idx=mode_idx
+    )
+    ax.set_title("First-order Scattering of Defect Modes")
+    fig.savefig("./examples/figures/survival.first_order_scatter.png", dpi=300)
+
+    fig, ax, line = plot_first_order_scatter_against_qx(
+        pristine_modes.as_full(), defect_modes, pristine_idx=mode_idx
+    )
+    ax.set_title("First-order Scattering of Defect Modes against qx")
+    fig.savefig("./examples/figures/survival.first_order_scatter_qx.png", dpi=300)

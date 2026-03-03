@@ -34,8 +34,10 @@ class RepeatSystem(System):
     @property
     @override
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        n_primitive_atoms = self._system.n_primitive_atoms
         return np.tile(
-            self._system.masses.reshape(self._system.n_repeats), self._n_repeats
+            self._system.masses.reshape(n_primitive_atoms, *self._system.n_repeats),
+            (1, *self._n_repeats),
         ).ravel()
 
     @property
@@ -95,9 +97,11 @@ def repeat_mode[S: System](
     mode: NormalMode[S], n_repeats: tuple[int, int, int]
 ) -> NormalMode[RepeatSystem]:
     """Repeat a mode to create a new mode for a larger system."""
-    vector = mode.vector.reshape(*mode.system.n_repeats, 3).copy()
+    n_primitive_atoms = mode.system.n_primitive_atoms
+    vector = mode.vector.reshape(n_primitive_atoms, *mode.system.n_repeats, 3)
+    vector = vector.copy()
     vector /= np.prod(n_repeats) ** 0.5  # Normalize the mode
-    new_vector = np.tile(vector, (*n_repeats, 1))
+    new_vector = np.tile(vector, (1, *n_repeats, 1))
     new_vector = new_vector.reshape(-1, 3)
     return CanonicalMode(
         system=RepeatSystem(n_repeats=n_repeats, system=mode.system),

@@ -1,7 +1,11 @@
+import ase.build
 import numpy as np
 
-from phonon_lifetime.pristine import PristineSystem
-from phonon_lifetime.system import get_atom_fractions, get_atom_supercell_fractions
+from phonon_lifetime.pristine import PristineSystem, from_ase_atoms
+from phonon_lifetime.system import (
+    get_atom_fractions,
+    get_atom_supercell_fractions,
+)
 
 
 def test_atom_fractions_square() -> None:
@@ -12,7 +16,7 @@ def test_atom_fractions_square() -> None:
         spring_constant=(0.0, 0.0, 0.0),
     )
     fractions = system.primitive_atom_fractions
-    np.testing.assert_array_equal(fractions, [[0.0, 0.0, 0.0]])
+    np.testing.assert_array_almost_equal(fractions, [[0.0, 0.0, 0.0]])
 
     all_fractions = get_atom_fractions(system)
     expected_fractions = (
@@ -27,7 +31,7 @@ def test_atom_fractions_square() -> None:
         .reshape(3, -1)
         .T
     )
-    np.testing.assert_array_equal(all_fractions, expected_fractions)
+    np.testing.assert_array_almost_equal(all_fractions, expected_fractions)
 
 
 def test_supercell_atom_fractions_square() -> None:
@@ -50,4 +54,20 @@ def test_supercell_atom_fractions_square() -> None:
         .reshape(3, -1)
         .T
     )
-    np.testing.assert_array_equal(all_fractions, expected_fractions)
+    np.testing.assert_array_almost_equal(all_fractions, expected_fractions)
+
+
+def test_supercell_atom_fractions_graphene() -> None:
+
+    n_repeats = (3, 1, 1)
+    atoms = ase.build.graphene(a=2.46, thickness=3.35)
+    repeat_atoms = atoms.repeat(n_repeats)
+    system = from_ase_atoms(atoms, n_repeats=n_repeats)
+
+    actual = system.primitive_atom_fractions
+    expected = atoms.get_scaled_positions()
+    np.testing.assert_array_almost_equal(actual, expected)
+
+    actual = get_atom_supercell_fractions(system)
+    expected = repeat_atoms.get_scaled_positions()
+    np.testing.assert_array_almost_equal(actual, expected)

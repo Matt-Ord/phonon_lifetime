@@ -141,6 +141,7 @@ def plot_overlap_weights(
     ax.set_xlabel("Defect Frequency")
     ax.set_ylabel("Overlap Weight")
     ax.set_ylim(0, None)
+    ax.legend()
     return fig, ax, line
 
 
@@ -150,9 +151,10 @@ def get_first_order_scatter(
 ) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
     """Calculate the first-order scattering matrix element <p_k|V|p_i>."""
     # overlap are W_ki = <\bar{psi}_k| |psi_i>
-    # Scatter is the matrix element <\bar{psi}_k|V|p_i> = sum_j W_kj * omega_k (if we ignore k=i)
+    # Scatter is the matrix element <\bar{psi}_k|V|p_i> = sum_j W_kj * (omega_k - omega_j) (if we ignore k=i)
     overlap = get_state_overlap_matrix(pristine, defects)
-    scatter = np.einsum("ki,k->ki", overlap, defects.omega)
+    d_omega = defects.omega[:, np.newaxis] - pristine.omega[np.newaxis, :]
+    scatter = np.einsum("ki,ki->ki", overlap, d_omega)
     return np.einsum("kf,ki->fi", overlap.conj(), scatter)
 
 
@@ -211,10 +213,10 @@ def plot_first_order_scatter_against_qx(
         )
         line.set_marker("x")
 
-    ax.axvline(
-        pristine[pristine_idx].q_val[0], linestyle="--", label="Pristine Frequency"
-    )
+    line = ax.axvline(pristine[pristine_idx].q_val[0], linestyle="--")
+    line.set_label("Pristine qx")
 
+    ax.legend()
     ax.set_title("First-order Scattering against qx")
     ax.set_xlabel("State Frequency")
     ax.set_ylabel("Scattering Strength")

@@ -16,7 +16,7 @@ if __name__ == "__main__":
         mass=10,
         primitive_cell=np.diag([1.0, 1.0, 1.0]),
         n_repeats=(25, 1, 1),
-        spring_constant=(1, 0.0, 0.0),
+        spring_constant=(1, 0, 0.0),
     )
     pristine_modes = system.get_modes().at_branch(2)
     mode_idx = pristine_modes.get_mode_idx(q=(5, 0, 0))

@@ -62,7 +62,11 @@ class NormalMode[S: System](ABC):
     @property
     @abstractmethod
     def vector(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        """The vector of the mode, an (n_atoms, 3) array."""
+        """The vector of the mode, an (n_atoms, 3) array.
+
+        For a mode with multiple atoms in a primitive cell, the vector is
+        ordered (n_primitive_atoms, n_repeats_x, n_repeats_y, n_repeats_z, 3).
+        """
 
     @property
     @abstractmethod

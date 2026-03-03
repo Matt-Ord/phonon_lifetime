@@ -5,6 +5,7 @@ from matplotlib.animation import ArtistAnimation
 
 from phonon_lifetime._util import get_axis, get_axis_3d
 from phonon_lifetime.modes._util import get_mode_displacement
+from phonon_lifetime.system._plot import plot_system_xy, plot_system_xyz
 from phonon_lifetime.system._util import get_atom_centres
 
 if TYPE_CHECKING:
@@ -13,7 +14,6 @@ if TYPE_CHECKING:
     from matplotlib.collections import PathCollection
     from matplotlib.figure import Figure
     from matplotlib.lines import Line2D
-    from matplotlib.quiver import Quiver
     from mpl_toolkits.mplot3d.axes3d import Axes3D
 
     from phonon_lifetime.modes._mode import NormalMode
@@ -71,89 +71,61 @@ def animate_mode_1d_x(
     return fig, ax, ArtistAnimation(fig, artists)
 
 
-def plot_mode_2d_xy(
-    mode: NormalMode,
-    time: float = 0,
-    idx: int = 0,
-    *,
-    ax: Axes | None = None,
-) -> tuple[Figure, Axes, Quiver]:
-    fig, ax = get_axis(ax)
-
-    displacement = get_mode_displacement(mode, time=time)
-    centres_x, centres_y, _ = get_atom_centres(mode.system).T
-
-    displacement = displacement.reshape(*mode.system.n_repeats, 3)
-    displacement_xy = displacement[:, :, idx, :2]
-
-    quiver = ax.quiver(
-        centres_x.reshape(*mode.system.n_repeats)[:, :, idx],
-        centres_y.reshape(*mode.system.n_repeats)[:, :, idx],
-        displacement_xy[:, :, 0],
-        displacement_xy[:, :, 1],
-        angles="xy",
-        scale_units="xy",
-        scale=1.0,
-    )
-
-    ax.set_aspect("equal")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    return fig, ax, quiver
-
-
-def animate_mode_2d_xy(
-    mode: NormalMode,
-    times: np.ndarray[Any, np.dtype[np.floating]] | None = None,
-    idx: int = 0,
-    *,
-    ax: Axes | None = None,
-) -> tuple[Figure, Axes, ArtistAnimation]:
-    fig, ax = get_axis(ax)
-
-    times = times if times is not None else _get_default_times(mode)
-    artists = [[plot_mode_2d_xy(mode, time=t, idx=idx, ax=ax)[2]] for t in times]
-    return fig, ax, ArtistAnimation(fig, artists)
-
-
 def plot_mode_xyz(
     mode: NormalMode,
     time: float = 0,
-    idx: int = 0,
     *,
     ax: Axes3D | None = None,
+    bond_cutoff: float = 1.5,
 ) -> tuple[Figure, Axes3D, tuple[PathCollection, Artist]]:
-    fig, ax = get_axis_3d(ax)
 
     displacement = get_mode_displacement(mode, time=time)
-    displacement = displacement.reshape(*mode.system.n_repeats, 3)
-    centres = get_atom_centres(mode.system).reshape(*mode.system.n_repeats, 3)
-
-    locations = centres[:, :, idx] + displacement[:, :, idx]
-    # New positions = Original positions + Displacement
-    x = locations[:, :, 0]
-    y = locations[:, :, 1]
-    z = locations[:, :, 2]
-
-    wire = ax.plot_wireframe(x, y, z, color="C0", linewidth=0.5)
-    # Add points at each atom
-    scatter = ax.scatter(x, y, z, color="C1", s=10)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
-
-    return fig, ax, (wire, scatter)
+    return plot_system_xyz(
+        mode.system, displacement=displacement, ax=ax, bond_cutoff=bond_cutoff
+    )
 
 
 def animate_mode_xyz(
     mode: NormalMode,
     times: np.ndarray[Any, np.dtype[np.floating]] | None = None,
-    idx: int = 0,
     *,
     ax: Axes3D | None = None,
+    bond_cutoff: float = 1.5,
 ) -> tuple[Figure, Axes3D, ArtistAnimation]:
     fig, ax = get_axis_3d(ax)
 
     times = times if times is not None else _get_default_times(mode)
-    artists = [plot_mode_xyz(mode, time=t, idx=idx, ax=ax)[2] for t in times]
+    artists = [
+        plot_mode_xyz(mode, time=t, ax=ax, bond_cutoff=bond_cutoff)[2] for t in times
+    ]
+    return fig, ax, ArtistAnimation(fig, artists)
+
+
+def plot_mode_xy(
+    mode: NormalMode,
+    time: float = 0,
+    *,
+    ax: Axes3D | None = None,
+    bond_cutoff: float = 1.5,
+) -> tuple[Figure, Axes3D, tuple[PathCollection, Artist]]:
+
+    displacement = get_mode_displacement(mode, time=time)
+    return plot_system_xy(
+        mode.system, displacement=displacement, ax=ax, bond_cutoff=bond_cutoff
+    )
+
+
+def animate_mode_xy(
+    mode: NormalMode,
+    times: np.ndarray[Any, np.dtype[np.floating]] | None = None,
+    *,
+    ax: Axes3D | None = None,
+    bond_cutoff: float = 1.5,
+) -> tuple[Figure, Axes3D, ArtistAnimation]:
+    fig, ax = get_axis_3d(ax)
+
+    times = times if times is not None else _get_default_times(mode)
+    artists = [
+        plot_mode_xy(mode, time=t, ax=ax, bond_cutoff=bond_cutoff)[2] for t in times
+    ]
     return fig, ax, ArtistAnimation(fig, artists)

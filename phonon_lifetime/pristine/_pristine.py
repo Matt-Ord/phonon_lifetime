@@ -1,20 +1,13 @@
 import warnings
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Literal, cast, overload, override
+from typing import Any, Literal, overload, override
 
-import ase.build
 import numpy as np
-from ase import Atoms
-from ase.neighborlist import neighbor_list
 from phonopy.api_phonopy import Phonopy
 from phonopy.structure.atoms import PhonopyAtoms
 
 from phonon_lifetime.modes._mode import NormalMode, NormalModes
-from phonon_lifetime.pristine._util import (
-    full_forces_from_stiffness_tensor_square,
-    stiffness_from_spring_constant,
-)
 from phonon_lifetime.system._system import System
 
 
@@ -244,16 +237,10 @@ class PristineSystem(System):
         self._n_repeats = n_repeats
         if forces is None:
             forces = np.zeros(
-                (
-                    self.n_atoms,
-                    self.n_atoms,
-                    3,
-                    3,
-                ),
+                (self.n_atoms, self.n_atoms, 3, 3),
                 dtype=np.float64,
             )  # ty:ignore[invalid-assignment]
-        else:
-            self._forces = forces
+        self._forces = forces
 
         assert self.primitive_cell.shape == (3, 3), (
             "Primitive cell should be a 3x3 array of lattice vectors."
@@ -263,26 +250,6 @@ class PristineSystem(System):
                 "Even n_repeats will result in modes which are not periodic.",
                 stacklevel=2,
             )
-
-    @staticmethod
-    def from_spring_constant(
-        mass: float,
-        primitive_cell: np.ndarray[tuple[int, int], np.dtype[np.floating]],
-        n_repeats: tuple[int, int, int],
-        spring_constant: tuple[float, float, float],
-    ) -> PristineSystem:
-        """Create a PristineSystem from a spring constant."""
-        stiffness_tensor = stiffness_from_spring_constant(spring_constant)
-
-        return PristineSystem(
-            mass=mass,
-            primitive_cell=primitive_cell,
-            primitive_atom_fractions=np.array([[0.0, 0.0, 0.0]]),
-            n_repeats=n_repeats,
-            forces=full_forces_from_stiffness_tensor_square(
-                stiffness_tensor, n_repeats
-            ),
-        )
 
     @property
     @override
@@ -375,37 +342,3 @@ class PristineSystem(System):
     @override
     def as_pristine(self) -> PristineSystem:
         return self
-
-
-def from_ase_atoms(atoms: Atoms, n_repeats: tuple[int, int, int]) -> PristineSystem:
-    primitive_cell = atoms.get_cell()
-    primitive_cell[2, 2] = 1
-    return PristineSystem(
-        mass=atoms.get_masses()[0],
-        primitive_cell=primitive_cell,
-        n_repeats=n_repeats,
-        primitive_atom_fractions=atoms.get_scaled_positions(),
-    )
-
-
-def build_graphene_system(
-    mass: float,
-    n_repeats: tuple[int, int, Literal[1]],
-    spring_constant: float,
-    *,
-    distance: float = 2.460,
-) -> PristineSystem:
-    cell = cast("Atoms", ase.build.graphene(a=distance))
-    cell.set_masses([mass] * len(cell))
-
-    repeat_cell = cast("Atoms", cell.repeat(n_repeats))
-
-    n_atoms = len(repeat_cell)
-    forces = np.zeros((n_atoms, n_atoms, 3, 3), dtype=np.float64)
-    locations_i, locations_j, directions = neighbor_list("ijD", repeat_cell, cutoff=1.5)
-    for i, j, d in zip(locations_i, locations_j, directions, strict=False):
-        direction = d / np.linalg.norm(d)
-        np.testing.assert_allclose(1, np.linalg.norm(direction))
-        forces[i, j] -= spring_constant * np.outer(direction, direction)
-
-    return from_ase_atoms(cell, n_repeats=n_repeats).with_forces(forces=forces)  # ty:ignore[invalid-argument-type]

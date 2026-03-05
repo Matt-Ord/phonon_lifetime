@@ -5,7 +5,8 @@ from matplotlib.animation import ArtistAnimation
 
 from phonon_lifetime._util import get_axis, get_axis_3d
 from phonon_lifetime.modes._util import get_mode_displacement
-from phonon_lifetime.system._plot import plot_system_xy, plot_system_xyz
+from phonon_lifetime.system._plot import plot_xy as plot_system_xy
+from phonon_lifetime.system._plot import plot_xyz as plot_system_xyz
 from phonon_lifetime.system._util import get_atom_centres
 
 if TYPE_CHECKING:

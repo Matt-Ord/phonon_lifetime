@@ -1,18 +1,19 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
+from phonon_lifetime import pristine
 from phonon_lifetime.modes import (
     animate_mode_1d_x,
     plot_mode_1d_x,
 )
-from phonon_lifetime.pristine import PristineSystem, plot_dispersion_1d
+from phonon_lifetime.pristine import plot_dispersion_1d
+from phonon_lifetime.system import build
 
 if __name__ == "__main__":
-    system = PristineSystem.from_spring_constant(
-        mass=10,
-        primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(101, 1, 1),
-        spring_constant=(1, 0.0, 0.0),
+    system = build.cubic(
+        mass=10, distance=1.0, n_repeats=(101, 1, 1), structure="simple"
+    )
+    system = pristine.with_nearest_neighbour_force(
+        system, spring_constant=1.0, periodic=(True, False, False), cutoff=1.1
     )
 
     result = system.get_modes()

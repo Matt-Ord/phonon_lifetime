@@ -1,16 +1,11 @@
 import numpy as np
 
 from phonon_lifetime.defect import MassDefect, MassDefectSystem
-from phonon_lifetime.pristine import PristineSystem
+from phonon_lifetime.system import build
 
 
 def test_mass_defect_vectors() -> None:
-    system = PristineSystem.from_spring_constant(
-        mass=10,
-        primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(7, 1, 1),
-        spring_constant=(1, 0, 0),
-    )
+    system = build.cubic(mass=10, distance=1, n_repeats=(7, 1, 1), structure="simple")
 
     defect = MassDefectSystem(pristine=system, defect=MassDefect(defects=[]))
 
@@ -18,7 +13,4 @@ def test_mass_defect_vectors() -> None:
     vectors = modes.vectors
 
     for i in range(modes.n_modes):
-        np.testing.assert_array_equal(
-            vectors[i].reshape(-1, 3),
-            modes[i].vector,
-        )
+        np.testing.assert_array_equal(vectors[i].reshape(-1, 3), modes[i].vector)

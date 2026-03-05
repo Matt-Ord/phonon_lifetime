@@ -1,6 +1,16 @@
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+from ase.neighborlist import neighbor_list
+
+from phonon_lifetime.system._util import as_ase_atoms
+
+from ._pristine import PristineSystem
+
+if TYPE_CHECKING:
+    from ase import Atoms
+
+    from phonon_lifetime import System
 
 
 def stiffness_from_spring_constant(
@@ -83,3 +93,41 @@ def full_forces_from_stiffness_tensor_square(
         fc[i, i, :, :] -= np.sum(fc[i, :, :, :], axis=0)
 
     return fc
+
+
+def from_ase_atoms(atoms: Atoms, n_repeats: tuple[int, int, int]) -> PristineSystem:
+    primitive_cell = atoms.get_cell()
+    primitive_cell[2, 2] = 1
+    return PristineSystem(
+        mass=atoms.get_masses()[0],
+        primitive_cell=primitive_cell,
+        n_repeats=n_repeats,
+        primitive_atom_fractions=atoms.get_scaled_positions(),
+    )
+
+
+def with_nearest_neighbour_force(
+    system: System,
+    spring_constant: float,
+    *,
+    cutoff: float = 2.460,
+    periodic: tuple[bool, bool, bool] = (True, True, True),
+) -> PristineSystem:
+    """Return a new PristineSystem with nearest neighbour forces added.
+
+    The forces are added in the form of a spring force between nearest neighbours, with the given spring constant.
+    The cutoff is used to determine which atoms are considered nearest neighbours.
+
+    """
+    as_pristine = system.as_pristine()
+    as_ase = as_ase_atoms(as_pristine)
+    as_ase.set_pbc(periodic)
+    forces = np.zeros_like(system.forces)
+    locations_i, locations_j, directions = neighbor_list("ijD", as_ase, cutoff=cutoff)
+    for i, j, d in zip(locations_i, locations_j, directions, strict=False):
+        direction = d / np.linalg.norm(d)
+        np.testing.assert_allclose(1, np.linalg.norm(direction))
+        forces[i, j] -= spring_constant * np.outer(direction, direction)
+    for i in range(forces.shape[0]):
+        forces[i, i, :, :] -= np.sum(forces[i, :, :, :], axis=0)
+    return as_pristine.with_forces(forces=forces)

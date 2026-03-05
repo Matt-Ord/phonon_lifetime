@@ -50,7 +50,7 @@ def test_build_force_matrix_x() -> None:
     spring_constant = 1
     n_repeats = (37, 1, 1)
     system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
-    system = pristine.with_nearest_neighbour_force(
+    system = pristine.with_nearest_neighbor_force(
         system,
         spring_constant=spring_constant,
         periodic=(True, False, False),
@@ -71,7 +71,7 @@ def test_build_force_matrix_y() -> None:
     n_repeats = (1, 2, 1)
     spring_constant = 1
     system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
-    system = pristine.with_nearest_neighbour_force(
+    system = pristine.with_nearest_neighbor_force(
         system,
         spring_constant=spring_constant,
         periodic=(False, True, False),
@@ -91,7 +91,7 @@ def test_build_force_matrix_explicit() -> None:
     n_repeats = (3, 1, 1)
     spring_constant = 1
     system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
-    system = pristine.with_nearest_neighbour_force(
+    system = pristine.with_nearest_neighbor_force(
         system,
         spring_constant=spring_constant,
         periodic=(True, False, False),

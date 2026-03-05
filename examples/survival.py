@@ -16,7 +16,7 @@ if __name__ == "__main__":
     system = build.cubic(
         mass=10, distance=1.0, n_repeats=(25, 1, 1), structure="simple"
     )
-    system = pristine.with_nearest_neighbour_force(
+    system = pristine.with_nearest_neighbor_force(
         system, spring_constant=1.0, periodic=(True, False, False), cutoff=1.1
     )
     pristine_modes = system.get_modes().at_branch(2)

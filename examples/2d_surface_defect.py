@@ -1,19 +1,16 @@
-import numpy as np
-
+from phonon_lifetime import pristine
 from phonon_lifetime.defect import VacancyDefect, VacancySystem
 from phonon_lifetime.modes import animate_mode_xy, plot_mode_xy
-from phonon_lifetime.pristine import PristineSystem
+from phonon_lifetime.system import build
 
 if __name__ == "__main__":
-    pristine = PristineSystem.from_spring_constant(
-        mass=10,
-        primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(3, 3, 1),
-        spring_constant=(1, 1, 0),
+    system = build.cubic(mass=10, distance=1.0, n_repeats=(3, 3, 1), structure="simple")
+    system = pristine.with_nearest_neighbor_force(
+        system, spring_constant=1.0, periodic=(True, True, False), cutoff=1.1
     )
 
     vacancy_system = VacancySystem(
-        pristine=pristine,
+        pristine=system,
         defect=VacancyDefect(defects=[]),
     )
     mode = vacancy_system.get_mode(idx=10)
@@ -31,7 +28,7 @@ if __name__ == "__main__":
     )
 
     vacancy_system = VacancySystem(
-        pristine=pristine,
+        pristine=system,
         defect=VacancyDefect(defects=[1]),
     )
     mode = vacancy_system.get_mode(idx=10)

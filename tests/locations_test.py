@@ -1,20 +1,17 @@
 import ase.build
 import numpy as np
 
-from phonon_lifetime.pristine import PristineSystem, from_ase_atoms
+from phonon_lifetime.pristine import from_ase_atoms
 from phonon_lifetime.system import (
+    build,
     get_atom_fractions,
     get_atom_supercell_fractions,
 )
 
 
 def test_atom_fractions_square() -> None:
-    system = PristineSystem.from_spring_constant(
-        mass=10,
-        primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(7, 3, 5),
-        spring_constant=(0.0, 0.0, 0.0),
-    )
+
+    system = build.cubic(mass=10, distance=1, n_repeats=(7, 3, 5), structure="simple")
     fractions = system.primitive_atom_fractions
     np.testing.assert_array_almost_equal(fractions, [[0.0, 0.0, 0.0]])
 
@@ -35,12 +32,8 @@ def test_atom_fractions_square() -> None:
 
 
 def test_supercell_atom_fractions_square() -> None:
-    system = PristineSystem.from_spring_constant(
-        mass=10,
-        primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(7, 3, 5),
-        spring_constant=(0.0, 0.0, 0.0),
-    )
+
+    system = build.cubic(mass=10, distance=1, n_repeats=(7, 3, 5), structure="simple")
     all_fractions = get_atom_supercell_fractions(system)
     expected_fractions = (
         np.asarray(

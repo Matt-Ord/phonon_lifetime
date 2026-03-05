@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from phonon_lifetime import System
 
 
-def plot_system_xyz(
+def plot_xyz(
     system: System,
     displacement: np.ndarray[tuple[int, Literal[3]], np.dtype[np.floating]]
     | None = None,
@@ -25,7 +25,7 @@ def plot_system_xyz(
 ) -> tuple[Figure, Axes3D, tuple[PathCollection, Line3DCollection]]:
     fig, ax = get_axis_3d(ax)
 
-    as_ase = as_ase_atoms(system)
+    as_ase = as_ase_atoms(system.as_pristine())
     if displacement is None:
         centres = as_ase.get_positions()
     else:
@@ -48,7 +48,7 @@ def plot_system_xyz(
     return fig, ax, (scatter, line_collection)
 
 
-def plot_system_xy(
+def plot_xy(
     system: System,
     displacement: np.ndarray[tuple[int, Literal[3]], np.dtype[np.floating]]
     | None = None,
@@ -56,7 +56,7 @@ def plot_system_xy(
     ax: Axes3D | None = None,
     bond_cutoff: float = 1.5,
 ) -> tuple[Figure, Axes3D, tuple[PathCollection, Line3DCollection]]:
-    fig, ax, (scatter, line_collection) = plot_system_xyz(
+    fig, ax, (scatter, line_collection) = plot_xyz(
         system, displacement=displacement, ax=ax, bond_cutoff=bond_cutoff
     )
     ax.view_init(elev=90, azim=-90)

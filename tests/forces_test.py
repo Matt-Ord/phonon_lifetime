@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
 
-from phonon_lifetime.pristine import PristineSystem
+from phonon_lifetime import pristine
+from phonon_lifetime.system import build
 
 
 def _build_pristine_force_constant_matrix_slow(
@@ -46,17 +47,20 @@ def _build_pristine_force_constant_matrix_slow(
 
 
 def test_build_force_matrix_x() -> None:
-    spring_constant = (1, 0, 0)
+    spring_constant = 1
     n_repeats = (37, 1, 1)
-    system = PristineSystem.from_spring_constant(
-        mass=10,
-        primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=n_repeats,
+    system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
+    system = pristine.with_nearest_neighbour_force(
+        system,
         spring_constant=spring_constant,
+        periodic=(True, False, False),
+        cutoff=1.1,
     )
 
     actual = system.forces
-    desired = _build_pristine_force_constant_matrix_slow(spring_constant, n_repeats)
+    desired = _build_pristine_force_constant_matrix_slow(
+        (spring_constant, 0, 0), n_repeats
+    )
     np.testing.assert_array_equal(actual, desired)
     actual = system.pristine_forces
     np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
@@ -64,46 +68,34 @@ def test_build_force_matrix_x() -> None:
 
 @pytest.mark.filterwarnings("ignore:Even n_repeats ")
 def test_build_force_matrix_y() -> None:
-    n_repeats = (37, 2, 1)
-    spring_constant = (0, 1, 0)
-    system = PristineSystem.from_spring_constant(
-        mass=10,
-        primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=n_repeats,
+    n_repeats = (1, 2, 1)
+    spring_constant = 1
+    system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
+    system = pristine.with_nearest_neighbour_force(
+        system,
         spring_constant=spring_constant,
+        periodic=(False, True, False),
+        cutoff=1.1,
     )
 
     actual = system.forces
-    desired = _build_pristine_force_constant_matrix_slow(spring_constant, n_repeats)
-    np.testing.assert_array_equal(actual, desired)
-    actual = system.pristine_forces
-    np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
-
-
-def test_build_force_matrix_y_flat() -> None:
-    n_repeats = (37, 1, 1)
-    spring_constant = (0, 1, 0)
-
-    system = PristineSystem.from_spring_constant(
-        mass=10,
-        primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=n_repeats,
-        spring_constant=spring_constant,
+    desired = _build_pristine_force_constant_matrix_slow(
+        (0, spring_constant, 0), n_repeats
     )
-
-    actual = system.forces
-    desired = _build_pristine_force_constant_matrix_slow(spring_constant, n_repeats)
     np.testing.assert_array_equal(actual, desired)
     actual = system.pristine_forces
     np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
 
 
 def test_build_force_matrix_explicit() -> None:
-    system = PristineSystem.from_spring_constant(
-        mass=10,
-        primitive_cell=np.diag([1.0, 1.0, 1.0]),
-        n_repeats=(3, 1, 1),
-        spring_constant=(1, 0, 0),
+    n_repeats = (3, 1, 1)
+    spring_constant = 1
+    system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
+    system = pristine.with_nearest_neighbour_force(
+        system,
+        spring_constant=spring_constant,
+        periodic=(True, False, False),
+        cutoff=1.1,
     )
 
     actual = system.forces

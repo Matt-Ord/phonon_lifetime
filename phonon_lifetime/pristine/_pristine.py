@@ -219,6 +219,8 @@ class PristineModes(NormalModes["PristineSystem"]):
 class PristineSystem(System):
     """Represents a System of atoms."""
 
+    _forces: np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]
+
     def __init__(
         self,
         *,
@@ -236,11 +238,12 @@ class PristineSystem(System):
         self._primitive_atom_fractions = primitive_atom_fractions
         self._n_repeats = n_repeats
         if forces is None:
-            forces = np.zeros(
+            self._forces = np.zeros(  # ty:ignore[invalid-assignment]
                 (self.n_atoms, self.n_atoms, 3, 3),
                 dtype=np.float64,
-            )  # ty:ignore[invalid-assignment]
-        self._forces = forces
+            )
+        else:
+            self._forces = forces
 
         assert self.primitive_cell.shape == (3, 3), (
             "Primitive cell should be a 3x3 array of lattice vectors."

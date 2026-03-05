@@ -106,17 +106,17 @@ def from_ase_atoms(atoms: Atoms, n_repeats: tuple[int, int, int]) -> PristineSys
     )
 
 
-def with_nearest_neighbour_force(
+def with_nearest_neighbor_force(
     system: System,
     spring_constant: float,
     *,
     cutoff: float = 2.460,
     periodic: tuple[bool, bool, bool] = (True, True, True),
 ) -> PristineSystem:
-    """Return a new PristineSystem with nearest neighbour forces added.
+    """Return a new PristineSystem with nearest neighbor forces added.
 
-    The forces are added in the form of a spring force between nearest neighbours, with the given spring constant.
-    The cutoff is used to determine which atoms are considered nearest neighbours.
+    The forces are added in the form of a spring force between nearest neighbor, with the given spring constant.
+    The cutoff is used to determine which atoms are considered nearest neighbor.
 
     """
     as_pristine = system.as_pristine()

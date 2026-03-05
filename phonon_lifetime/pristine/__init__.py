@@ -6,7 +6,7 @@ from ._pristine import (
     PristineModes,
     PristineSystem,
 )
-from ._util import from_ase_atoms, with_nearest_neighbour_force
+from ._util import from_ase_atoms, with_nearest_neighbor_force
 
 __all__ = [
     "PristineMode",
@@ -15,5 +15,5 @@ __all__ = [
     "from_ase_atoms",
     "plot_dispersion_1d",
     "plot_dispersion_2d_xy",
-    "with_nearest_neighbour_force",
+    "with_nearest_neighbor_force",
 ]

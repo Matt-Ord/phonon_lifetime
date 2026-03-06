@@ -64,8 +64,8 @@ def plot_xy(
     # Hide the z-axis and gridlines to make it look like a 2D plot
     ax.set_zticks([])  # cspell: disable-line  # ty:ignore[call-non-callable]
     ax.set_zlabel("")
-    ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))  # ty:ignore[unresolved-attribute]
-    ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))  # ty:ignore[unresolved-attribute]
+    ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))  # ty:ignore[unresolved-attribute] # cspell: disable-line
+    ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))  # ty:ignore[unresolved-attribute] # cspell: disable-line
     ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))  # cspell: disable-line
     ax.grid(visible=False)
     return fig, ax, (scatter, line_collection)

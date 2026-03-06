@@ -119,18 +119,26 @@ class VacancySystem(System):
 
     @property
     @override
+    def symbols(self) -> list[str]:
+        return self._pristine.symbols
+
+    @property
+    @override
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
         return self._pristine.masses
 
     @override
     def get_modes(self) -> VacancyModes:
         vacancy = self.defect.defects
-        n_simulation_atoms = self.n_atoms - len(vacancy)
         all_positions = get_atom_supercell_fractions(self)
 
+        symbols = list(self.symbols)
+        for i in sorted(vacancy, reverse=True):
+            del symbols[i]
+
         cell = PhonopyAtoms(
-            symbols=["C"] * n_simulation_atoms,
-            masses=[self._pristine.mass] * n_simulation_atoms,
+            symbols=symbols,
+            masses=np.delete(self.masses, vacancy, axis=0),
             cell=get_supercell_cell(self),
             scaled_positions=np.delete(all_positions, self.defect.defects, axis=0),
         )

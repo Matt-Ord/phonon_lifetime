@@ -4,11 +4,10 @@ version = "0.0.1"
 description = "A Package to calculate phonon lifetime"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
-dependencies = [
-    "ase>=3.27.0",
-    "matplotlib>=3.10.8",
-    "phonopy>=2.47.1",
-]
+dependencies = ["ase>=3.27.0", "matplotlib>=3.10.8", "phonopy>=2.47.1"]
+
+[project.optional-dependencies]
+mace = ["mace-torch>=0.3.15"]
 
 [dependency-groups]
 dev = [
@@ -75,6 +74,9 @@ typeCheckingMode = "strict"
 include = ["tests", "phonon_lifetime", "examples"]
 reportImplicitOverride = true
 reportUnknownMemberType = false
+
+[tool.setuptools.packages.find]
+include = ["phonon_lifetime"]
 
 [build-system]
 requires = ["setuptools"]

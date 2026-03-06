@@ -3,12 +3,23 @@ from typing import TYPE_CHECKING, Literal, cast
 import ase.build
 from ase import Atoms
 
-from phonon_lifetime.pristine._util import from_ase_atoms
-
 if TYPE_CHECKING:
     import numpy as np
 
     from phonon_lifetime.pristine import PristineSystem
+
+
+def from_ase_atoms(atoms: Atoms, n_repeats: tuple[int, int, int]) -> PristineSystem:
+    """Build a system from an ASE Atoms object."""
+    from phonon_lifetime.pristine import PristineSystem  # noqa: PLC0415
+
+    return PristineSystem(
+        primitive_masses=atoms.get_masses(),
+        primitive_cell=atoms.cell.array,
+        n_repeats=n_repeats,
+        primitive_atom_fractions=atoms.get_scaled_positions(),
+        primitive_symbols=atoms.get_chemical_symbols(),
+    )
 
 
 def graphene(
@@ -18,9 +29,13 @@ def graphene(
     distance: float = 2.460,
 ) -> PristineSystem:
     """Build a graphene system."""
-    cell = cast("Atoms", ase.build.graphene(a=distance))
-    cell.set_masses([mass] * len(cell))
-    return from_ase_atoms(cell, n_repeats=n_repeats)
+    atoms = cast("Atoms", ase.build.graphene(a=distance))
+    atoms.set_masses([mass] * len(atoms))
+
+    cell = atoms.cell.array
+    cell[2, 2] = 1
+    atoms.set_cell(cell)
+    return from_ase_atoms(atoms, n_repeats=n_repeats)
 
 
 type CubicStructure = Literal["simple", "bcc", "fcc"]

@@ -216,15 +216,38 @@ class PristineModes(NormalModes["PristineSystem"]):
         )
 
 
+def _recover_full_forces(
+    forces: np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]],
+    n_repeats: tuple[int, int, int],
+) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+    """Recover the full forces from the pristine forces."""
+    n_primitive = forces.shape[0]
+    n_atoms = forces.shape[1]
+    full_forces = np.zeros((n_atoms, n_atoms, 3, 3), dtype=np.float64)
+    for i in range(n_atoms):
+        i_in_primitive = i % n_primitive
+        c_i = np.unravel_index(i // n_primitive, n_repeats)
+        for j in range(n_atoms):
+            p_j = j % n_primitive
+            c_j = np.unravel_index(j // n_primitive, n_repeats)
+            cj_relative = tuple((c_j[d] - c_i[d]) % n_repeats[d] for d in range(3))
+
+            j_relative_to_i = (
+                np.ravel_multi_index(cj_relative, n_repeats) * n_primitive + p_j
+            )
+            full_forces[i, j] = forces[i_in_primitive, j_relative_to_i]
+    return full_forces  # ty:ignore[invalid-return-type]
+
+
 class PristineSystem(System):
     """Represents a System of atoms."""
 
     _forces: np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
-        mass: float,
+        primitive_masses: np.ndarray[tuple[int], np.dtype[np.floating]],
         primitive_cell: np.ndarray[tuple[int, int], np.dtype[np.floating]],
         primitive_atom_fractions: np.ndarray[tuple[int, int], np.dtype[np.floating]],
         n_repeats: tuple[int, int, int],
@@ -232,27 +255,42 @@ class PristineSystem(System):
             tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]
         ]
         | None = None,
+        primitive_symbols: list[str] | None = None,
     ) -> None:
-        self._mass = mass
+        self._primitive_masses = primitive_masses
+        self._primitive_symbols: list[str] = (
+            ["C"] * primitive_masses.size
+            if primitive_symbols is None
+            else primitive_symbols
+        )
         self._primitive_cell = primitive_cell
         self._primitive_atom_fractions = primitive_atom_fractions
         self._n_repeats = n_repeats
         if forces is None:
             self._forces = np.zeros(  # ty:ignore[invalid-assignment]
-                (self.n_atoms, self.n_atoms, 3, 3),
+                (self.n_primitive_atoms, self.n_atoms, 3, 3),
                 dtype=np.float64,
             )
         else:
             self._forces = forces
+        self._assert_valid()
 
-        assert self.primitive_cell.shape == (3, 3), (
-            "Primitive cell should be a 3x3 array of lattice vectors."
-        )
-        if any(r % 2 == 0 for r in self.n_repeats):
-            warnings.warn(
-                "Even n_repeats will result in modes which are not periodic.",
-                stacklevel=2,
-            )
+    def _assert_valid(self) -> None:
+        if self._forces.shape != (self.n_primitive_atoms, self.n_atoms, 3, 3):
+            msg = f"Forces should have shape (n_primitive_atoms, n_atoms, 3, 3), but got {self._forces.shape}."
+            raise ValueError(msg)
+
+        if self.primitive_cell.shape != (3, 3):
+            msg = f"Primitive cell should have shape (3, 3), but got {self.primitive_cell.shape}."
+            raise ValueError(msg)
+
+        if len(self.primitive_symbols) != self.n_primitive_atoms:
+            msg = f"Number of primitive symbols should match number of primitive atoms, but got {len(self.primitive_symbols)} symbols and {self.n_primitive_atoms} primitive atoms."
+            raise ValueError(msg)
+
+        if self.primitive_masses.size != self.n_primitive_atoms:
+            msg = f"Number of primitive masses should match number of primitive atoms, but got {self.primitive_masses.size} masses and {self.n_primitive_atoms} primitive atoms."
+            raise ValueError(msg)
 
     @property
     @override
@@ -263,14 +301,14 @@ class PristineSystem(System):
     def pristine_forces(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        return self._forces[np.arange(self.n_primitive_atoms)]
+        return self._forces
 
     @property
     @override
     def forces(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        return self._forces
+        return _recover_full_forces(self._forces, self.n_repeats)
 
     def with_forces(
         self,
@@ -280,7 +318,7 @@ class PristineSystem(System):
     ) -> PristineSystem:
         """Return a new PristineSystem with the same properties but different forces."""
         return PristineSystem(
-            mass=self.mass,
+            primitive_masses=self.primitive_masses,
             primitive_cell=self.primitive_cell,
             primitive_atom_fractions=self.primitive_atom_fractions,
             n_repeats=self.n_repeats,
@@ -293,14 +331,26 @@ class PristineSystem(System):
         return self._n_repeats
 
     @property
-    def mass(self) -> float:
-        """Mass of the atom in the system."""
-        return self._mass
+    def primitive_masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        """Mass of the atoms in the unit cell."""
+        return self._primitive_masses
+
+    @property
+    @override
+    def symbols(self) -> list[str]:
+        """Symbols of all the atoms in the system."""
+        n_supercell = np.prod(self.n_repeats).item()
+        return [s for _ in range(n_supercell) for s in self.primitive_symbols]
+
+    @property
+    def primitive_symbols(self) -> list[str]:
+        """Symbols of the atoms in the unit cell."""
+        return self._primitive_symbols
 
     @property
     @override
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
-        return np.full(self.n_atoms, self.mass).astype(np.float64)
+        return np.tile(self.primitive_masses, np.prod(self.n_repeats).item()).ravel()
 
     @property
     @override
@@ -317,8 +367,8 @@ class PristineSystem(System):
     @override
     def get_modes(self) -> PristineModes:
         cell = PhonopyAtoms(
-            symbols=["C"] * self.n_primitive_atoms,
-            masses=[self.mass] * self.n_primitive_atoms,
+            symbols=self.primitive_symbols,
+            masses=self.primitive_masses,
             cell=self.primitive_cell,
             scaled_positions=self.primitive_atom_fractions,
         )

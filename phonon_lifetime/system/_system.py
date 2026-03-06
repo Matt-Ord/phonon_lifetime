@@ -59,6 +59,11 @@ class System(ABC):
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
         """Mass of every atom in the system."""
 
+    @property
+    @abstractmethod
+    def symbols(self) -> list[str]:
+        """Chemical symbol of every atom in the system."""
+
     @abstractmethod
     def as_pristine(self) -> PristineSystem:
         """Return a new System with no defects."""

@@ -59,7 +59,7 @@ class MassDefectModes(NormalModes["MassDefectSystem"]):
 class MassDefect:
     """A mass defect in the system."""
 
-    defects: list[tuple[float, int]]
+    defects: list[tuple[str | None, float, int]]
 
 
 class MassDefectSystem(System):
@@ -71,8 +71,8 @@ class MassDefectSystem(System):
         pristine: PristineSystem,
         defect: MassDefect,
     ) -> None:
-        self._pristine = pristine
-        self._defect = defect
+        self._pristine: PristineSystem = pristine
+        self._defect: MassDefect = defect
 
     @property
     def defect(self) -> MassDefect:
@@ -104,15 +104,24 @@ class MassDefectSystem(System):
     @override
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
         masses = self._pristine.masses
-        for mass, index in self.defect.defects:
+        for _symbol, mass, index in self.defect.defects:
             masses[index] = mass
         return masses
+
+    @property
+    @override
+    def symbols(self) -> list[str]:
+        symbols = self._pristine.symbols
+        for symbol, _mass, index in self.defect.defects:
+            if symbol is not None:
+                symbols[index] = symbol
+        return symbols
 
     @override
     def get_modes(self) -> MassDefectModes:
 
         cell = PhonopyAtoms(
-            symbols=["C"] * self.n_atoms,
+            symbols=self.symbols,
             masses=self.masses,
             cell=get_supercell_cell(self),
             scaled_positions=get_atom_supercell_fractions(self),

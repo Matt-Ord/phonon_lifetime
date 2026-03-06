@@ -1,30 +1,33 @@
 from typing import TYPE_CHECKING, Literal
 
 from ase import Atoms
-
-from phonon_lifetime.pristine._pristine import PristineSystem
+from ase.cell import Cell
 
 if TYPE_CHECKING:
     import numpy as np
 
     from phonon_lifetime import System
+    from phonon_lifetime.pristine import PristineSystem
 
 
 def as_primitive(system: System) -> PristineSystem:
-    cell = system.primitive_cell
+
+    from phonon_lifetime.pristine._pristine import PristineSystem  # noqa: PLC0415
+
     return PristineSystem(
-        mass=system.as_pristine().mass,
-        primitive_cell=cell,
+        primitive_masses=system.as_pristine().primitive_masses,
+        primitive_cell=system.primitive_cell,
         n_repeats=(1, 1, 1),
         primitive_atom_fractions=system.primitive_atom_fractions,
+        primitive_symbols=system.as_pristine().primitive_symbols,
     )
 
 
 def as_ase_atoms(system: PristineSystem) -> Atoms:
     return Atoms(
-        symbols=["C"] * system.n_primitive_atoms,
-        masses=[system.mass] * system.n_primitive_atoms,
-        cell=system.primitive_cell,
+        symbols=system.primitive_symbols,
+        masses=system.primitive_masses,
+        cell=Cell(system.primitive_cell),
         scaled_positions=system.primitive_atom_fractions,
     ).repeat(system.n_repeats)
 

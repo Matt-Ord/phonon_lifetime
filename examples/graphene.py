@@ -3,9 +3,7 @@ from phonon_lifetime.modes import animate_mode_xy, repeat_mode
 
 if __name__ == "__main__":
     graphene = system.build.graphene(mass=10, n_repeats=(3, 3, 1))
-    graphene = pristine.with_nearest_neighbor_force(
-        graphene, spring_constant=1, periodic=(True, True, False)
-    )
+    graphene = pristine.with_ase_forces(graphene, periodic=(True, True, False))
 
     fig, ax, _ = system.plot_xyz(graphene)
     ax.set_title("Graphene Lattice")

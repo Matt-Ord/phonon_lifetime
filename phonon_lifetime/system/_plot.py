@@ -31,7 +31,7 @@ def plot_xyz(
     else:
         centres = as_ase.get_positions() + (0.2 * bond_cutoff) * displacement
 
-    scatter = ax.scatter(*centres.T, color="C1", s=10)
+    scatter = ax.scatter(*centres.T, color="C1", s=20)
 
     bonds = neighbor_list("ij", as_ase, cutoff=bond_cutoff)
     line_collection = Line3DCollection(
@@ -61,4 +61,11 @@ def plot_xy(
     )
     ax.view_init(elev=90, azim=-90)
     ax.set_aspect("equalxy")  # cspell: disable-line
+    # Hide the z-axis and gridlines to make it look like a 2D plot
+    ax.set_zticks([])  # cspell: disable-line  # ty:ignore[call-non-callable]
+    ax.set_zlabel("")
+    ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))  # ty:ignore[unresolved-attribute]
+    ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))  # ty:ignore[unresolved-attribute]
+    ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))  # cspell: disable-line
+    ax.grid(visible=False)
     return fig, ax, (scatter, line_collection)

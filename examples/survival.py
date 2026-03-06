@@ -16,7 +16,7 @@ if __name__ == "__main__":
     system = build.cubic(
         mass=10, distance=1.0, n_repeats=(25, 1, 1), structure="simple"
     )
-    system = pristine.with_nearest_neighbor_force(
+    system = pristine.with_nearest_neighbor_forces(
         system, spring_constant=1.0, periodic=(True, False, False), cutoff=1.1
     )
     pristine_modes = system.get_modes().at_branch(2)
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     for mass in [10, 10.5, 11, 11.5, 12]:
         defect = MassDefectSystem(
-            pristine=system, defect=MassDefect(defects=[(mass, 0)])
+            pristine=system, defect=MassDefect(defects=[(None, mass, 0)])
         )
 
         _, _, line = plot_survival_probability(
@@ -50,7 +50,9 @@ if __name__ == "__main__":
     fig.savefig("./examples/figures/survival.against_mass.png", dpi=300)
 
     # If we plot the rate against time, it eventually converges to a constant value.
-    defect = MassDefectSystem(pristine=system, defect=MassDefect(defects=[(50, 0)]))
+    defect = MassDefectSystem(
+        pristine=system, defect=MassDefect(defects=[(None, 50, 0)])
+    )
     defect_modes = defect.get_modes()
     times = np.linspace(0, times[-1] * 10, 50)[1:]
     rates = [

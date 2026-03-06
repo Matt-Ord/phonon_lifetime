@@ -5,7 +5,7 @@ from phonon_lifetime.system import build
 
 if __name__ == "__main__":
     system = build.cubic(mass=10, distance=1.0, n_repeats=(3, 3, 1), structure="simple")
-    system = pristine.with_nearest_neighbor_force(
+    system = pristine.with_nearest_neighbor_forces(
         system, spring_constant=1.0, periodic=(True, True, False), cutoff=1.1
     )
 
@@ -13,13 +13,13 @@ if __name__ == "__main__":
         pristine=system,
         defect=VacancyDefect(defects=[]),
     )
-    mode = vacancy_system.get_mode(idx=10)
+    mode = vacancy_system.get_mode(idx=11)
 
-    fig, ax, _ = plot_mode_xy(mode)
+    fig, ax, _ = plot_mode_xy(mode, bond_cutoff=1.1)
     ax.set_title("Phonon Mode for 2D Surface")
     fig.savefig("./examples/figures/2d_surface.defect.mode.0.png", dpi=300)
 
-    fig, ax, anim = animate_mode_xy(mode)
+    fig, ax, anim = animate_mode_xy(mode, bond_cutoff=1.1)
     ax.set_title("Phonon Mode for 2D Surface")
     anim.save(
         "./examples/figures/2d_surface.defect.mode_animation.0.gif",
@@ -33,11 +33,11 @@ if __name__ == "__main__":
     )
     mode = vacancy_system.get_mode(idx=10)
 
-    fig, ax, _ = plot_mode_xy(mode)
+    fig, ax, _ = plot_mode_xy(mode, bond_cutoff=1.1)
     ax.set_title("Phonon Mode for 2D Surface")
     fig.savefig("./examples/figures/2d_surface.defect.mode.1.png", dpi=300)
 
-    fig, ax, anim = animate_mode_xy(mode)
+    fig, ax, anim = animate_mode_xy(mode, bond_cutoff=1.1)
     ax.set_title("Phonon Mode for 2D Surface")
     anim.save(
         "./examples/figures/2d_surface.defect.mode_animation.1.gif",

@@ -20,11 +20,13 @@ class RepeatSystem(System):
     @property
     @override
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
-        n_primitive_atoms = self._system.n_primitive_atoms
-        return np.tile(
-            self._system.masses.reshape(n_primitive_atoms, *self._system.n_repeats),
-            (1, *self._n_repeats),
-        ).ravel()
+        return np.tile(self._system.masses, np.prod(self._n_repeats).item()).ravel()
+
+    @property
+    @override
+    def symbols(self) -> list[str]:
+        n_supercell = np.prod(self._n_repeats).item()
+        return [s for _ in range(n_supercell) for s in self._system.symbols]
 
     @property
     @override
@@ -56,7 +58,8 @@ class RepeatSystem(System):
             stacklevel=2,
         )
         return PristineSystem(
-            mass=self._system.as_pristine().mass,
+            primitive_masses=self._system.as_pristine().primitive_masses,
+            primitive_symbols=self._system.as_pristine().primitive_symbols,
             primitive_cell=self.primitive_cell,
             n_repeats=self.n_repeats,
             primitive_atom_fractions=self._system.as_pristine().primitive_atom_fractions,

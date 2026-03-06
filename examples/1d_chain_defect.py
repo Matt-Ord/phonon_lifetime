@@ -16,7 +16,7 @@ if __name__ == "__main__":
     system = build.cubic(
         mass=10, distance=1.0, n_repeats=(101, 1, 1), structure="simple"
     )
-    system = pristine.with_nearest_neighbor_force(
+    system = pristine.with_nearest_neighbor_forces(
         system, spring_constant=1.0, periodic=(True, False, False), cutoff=1.1
     )
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     mass_defect_system = MassDefectSystem(
         pristine=system,
-        defect=MassDefect(defects=[(1, 0)]),
+        defect=MassDefect(defects=[(None, 1, 0)]),
     )
     # Branch 203 has the 0 atom stationary
     # Branch 204 the 0 mode moves, and this is a test of

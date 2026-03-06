@@ -10,12 +10,12 @@ if __name__ == "__main__":
     system = build.cubic(
         mass=10, distance=1.0, n_repeats=(101, 1, 1), structure="simple"
     )
-    system = pristine.with_nearest_neighbor_force(
+    system = pristine.with_nearest_neighbor_forces(
         system, spring_constant=1.0, periodic=(True, False, False), cutoff=1.1
     )
 
     modes = MassDefectSystem(
-        pristine=system, defect=MassDefect(defects=[(9.8, 0)])
+        pristine=system, defect=MassDefect(defects=[(None, 9.8, 0)])
     ).get_modes()
 
     # We plot wannier modes - but they are rather uninteresting

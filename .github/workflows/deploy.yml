@@ -22,7 +22,7 @@ jobs:
         run: uv python install
 
       - name: Install the project
-        run: uv sync --all-extras
+        run: uv sync --all-extras --no-extra mace
 
       - name: Build Sphinx documentation
         run: |

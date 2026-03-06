@@ -25,7 +25,9 @@ try:
             "ignore", category=UserWarning, module="mace.calculators.mace"
         )
 
-        from mace.calculators import mace_mp
+        from mace.calculators import (  # ty:ignore[unresolved-import, unused-ignore-comment]
+            mace_mp,
+        )
 except ImportError:
     pass
 

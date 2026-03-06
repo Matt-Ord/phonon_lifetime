@@ -100,7 +100,11 @@ def with_ase_forces(
     pristine = system.as_pristine()
     ase_unitcell = as_ase_atoms(as_primitive(pristine))
     ase_unitcell.set_pbc(periodic)
-    calc = mace_mp(model="mh-1", head="omat_pbe", default_dtype="float64")
+    calc = mace_mp(
+        model="mh-1",
+        head="omat_pbe",  # cspell: disable-line
+        default_dtype="float64",
+    )
     ase_unitcell.calc = calc
 
     # Relax the unit cell, so equilibrium forces are zero.

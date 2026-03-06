@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 from ase.filters import ExpCellFilter
 from ase.neighborlist import neighbor_list
-from ase.optimize import BFGS
+from ase.optimize import BFGS  # cspell: disable-line
 from ase.phonons import Phonons
 
 from phonon_lifetime.system import as_primitive
@@ -78,7 +78,10 @@ def _phonopy_forces_from_ase(
 
     # 2. Use einsum to rearrange
     # final shape (n_primitive_atoms, n_repeats , n_primitive_atoms, 3, 3)
-    compact_fc = np.einsum("nuivj -> unvij", reshaped_ase_forces)
+    compact_fc = np.einsum(
+        "nuivj -> unvij",  # cspell: disable-line
+        reshaped_ase_forces,
+    )
     # Phonopy convention: FC[unit_atom, super_atom, direction_i, direction_j]
     return compact_fc.reshape(n_primitive_atoms, n_repeats * n_primitive_atoms, 3, 3)
 
@@ -100,10 +103,12 @@ def with_ase_forces(
     calc = mace_mp(model="mh-1", head="omat_pbe", default_dtype="float64")
     ase_unitcell.calc = calc
 
+    # Relax the unit cell, so equilibrium forces are zero.
     ecf = ExpCellFilter(ase_unitcell)
-    opt = BFGS(ecf)  # ty:ignore[invalid-argument-type]
-    opt.run(fmax=0.01)
+    opt = BFGS(ecf)  # ty:ignore[invalid-argument-type] # cspell: disable-line
+    opt.run(fmax=0.01)  # cspell: disable-line
 
+    # Calculate forces on the supercell
     ase_phonons = Phonons(ase_unitcell, calc, supercell=system.n_repeats)
     ase_phonons.cache.clear()
     ase_phonons.run()

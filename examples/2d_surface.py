@@ -19,17 +19,17 @@ if __name__ == "__main__":
     result = system.get_modes()
 
     mode = result.select_mode(branch=2, q=(1, 0, 0))
-    fig, ax, _ = plot_mode_xy(mode, bond_cutoff=1.1)
+    fig, ax, _ = plot_mode_xy(mode, bond_cutoff=5)
     ax.set_title("Phonon Mode for 2D Surface")
     fig.savefig("./examples/figures/2d_surface.mode.png", dpi=300)
 
-    fig, ax, anim = animate_mode_xy(mode, bond_cutoff=1.1)
+    fig, ax, anim = animate_mode_xy(mode, bond_cutoff=5)
     ax.set_title("Phonon Mode for 2D Surface")
     anim.save(
         "./examples/figures/2d_surface.mode_animation.gif", dpi=300, writer="pillow"
     )
 
-    fig, ax, anim = animate_mode_xyz(mode, bond_cutoff=1.1)
+    fig, ax, anim = animate_mode_xyz(mode, bond_cutoff=5)
     ax.view_init(elev=20, azim=90)  # View from the side (20 degrees above the plane)
     anim.save(
         "./examples/figures/2d_surface.mode_3d_animation.side.gif",

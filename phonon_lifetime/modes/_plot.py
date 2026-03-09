@@ -77,12 +77,17 @@ def plot_mode_xyz(
     time: float = 0,
     *,
     ax: Axes3D | None = None,
-    bond_cutoff: float = 1.5,
+    bond_cutoff: float = np.inf,
+    scale_bond_lines: bool = True,
 ) -> tuple[Figure, Axes3D, tuple[PathCollection, Artist]]:
 
     displacement = get_mode_displacement(mode, time=time)
     return plot_system_xyz(
-        mode.system, displacement=displacement, ax=ax, bond_cutoff=bond_cutoff
+        mode.system,
+        displacement=displacement,
+        ax=ax,
+        bond_cutoff=bond_cutoff,
+        scale_bond_lines=scale_bond_lines,
     )
 
 
@@ -91,42 +96,66 @@ def animate_mode_xyz(
     times: np.ndarray[Any, np.dtype[np.floating]] | None = None,
     *,
     ax: Axes3D | None = None,
-    bond_cutoff: float = 1.5,
+    bond_cutoff: float = np.inf,
+    scale_bond_lines: bool = True,
 ) -> tuple[Figure, Axes3D, ArtistAnimation]:
     fig, ax = get_axis_3d(ax)
 
     times = times if times is not None else _get_default_times(mode)
     artists = [
-        plot_mode_xyz(mode, time=t, ax=ax, bond_cutoff=bond_cutoff)[2] for t in times
+        plot_mode_xyz(
+            mode,
+            time=t,
+            ax=ax,
+            bond_cutoff=bond_cutoff,
+            scale_bond_lines=scale_bond_lines,
+        )[2]
+        for t in times
     ]
     return fig, ax, ArtistAnimation(fig, artists)
 
 
-def plot_mode_xy(
+def plot_mode_xy(  # noqa: PLR0913
     mode: NormalMode,
     time: float = 0,
     *,
     ax: Axes3D | None = None,
-    bond_cutoff: float = 1.5,
+    bond_cutoff: float = np.inf,
+    scale_bond_lines: bool = True,
+    scale_displacement: float = 1.0,
 ) -> tuple[Figure, Axes3D, tuple[PathCollection, Artist]]:
 
     displacement = get_mode_displacement(mode, time=time)
     return plot_system_xy(
-        mode.system, displacement=displacement, ax=ax, bond_cutoff=bond_cutoff
+        mode.system,
+        displacement=displacement * scale_displacement,
+        ax=ax,
+        bond_cutoff=bond_cutoff,
+        scale_bond_lines=scale_bond_lines,
     )
 
 
-def animate_mode_xy(
+def animate_mode_xy(  # noqa: PLR0913
     mode: NormalMode,
     times: np.ndarray[Any, np.dtype[np.floating]] | None = None,
     *,
     ax: Axes3D | None = None,
-    bond_cutoff: float = 1.5,
+    bond_cutoff: float = np.inf,
+    scale_bond_lines: bool = True,
+    scale_displacement: float = 1.0,
 ) -> tuple[Figure, Axes3D, ArtistAnimation]:
     fig, ax = get_axis_3d(ax)
 
     times = times if times is not None else _get_default_times(mode)
     artists = [
-        plot_mode_xy(mode, time=t, ax=ax, bond_cutoff=bond_cutoff)[2] for t in times
+        plot_mode_xy(
+            mode,
+            time=t,
+            ax=ax,
+            bond_cutoff=bond_cutoff,
+            scale_bond_lines=scale_bond_lines,
+            scale_displacement=scale_displacement,
+        )[2]
+        for t in times
     ]
     return fig, ax, ArtistAnimation(fig, artists)

@@ -91,12 +91,7 @@ def with_ase_forces(
     *,
     periodic: tuple[bool, bool, bool] = (True, True, True),
 ) -> PristineSystem:
-    """Return a new PristineSystem with nearest neighbor forces added.
-
-    The forces are added in the form of a spring force between nearest neighbor, with the given spring constant.
-    The cutoff is used to determine which atoms are considered nearest neighbor.
-
-    """
+    """Return a new PristineSystem with forces calculated using ASE."""
     pristine = system.as_pristine()
     ase_unitcell = as_ase_atoms(as_primitive(pristine))
     ase_unitcell.set_pbc(periodic)
@@ -110,7 +105,7 @@ def with_ase_forces(
     # Relax the unit cell, so equilibrium forces are zero.
     ecf = ExpCellFilter(ase_unitcell)
     opt = BFGS(ecf)  # ty:ignore[invalid-argument-type] # cspell: disable-line
-    opt.run(fmax=0.01)  # cspell: disable-line
+    opt.run(fmax=1e-4)  # cspell: disable-line
 
     # Calculate forces on the supercell
     ase_phonons = Phonons(ase_unitcell, calc, supercell=system.n_repeats)

@@ -100,13 +100,13 @@ class VacancySystem(System):
 
     @property
     @override
-    def forces(
+    def strain_tensor(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        full_forces = self._pristine.forces
-        full_forces[self.defect.defects] = 0
-        full_forces[:, self.defect.defects] = 0
-        return full_forces
+        full_strain_tensor = self._pristine.strain_tensor
+        full_strain_tensor[self.defect.defects] = 0
+        full_strain_tensor[:, self.defect.defects] = 0
+        return full_strain_tensor
 
     @property
     @override
@@ -147,9 +147,9 @@ class VacancySystem(System):
             unitcell=cell, supercell_matrix=np.eye(3), primitive_matrix=np.eye(3)
         )
 
-        pristine_force_constants = self.forces
+        pristine_strain_tensor = self.strain_tensor
         phonon.force_constants = np.delete(
-            np.delete(pristine_force_constants, vacancy, axis=0), vacancy, axis=1
+            np.delete(pristine_strain_tensor, vacancy, axis=0), vacancy, axis=1
         )
 
         phonon.run_mesh((1, 1, 1), with_eigenvectors=True, is_mesh_symmetry=False)

@@ -1,4 +1,3 @@
-import warnings
 from typing import TYPE_CHECKING, Literal, override
 
 import numpy as np
@@ -35,9 +34,14 @@ class RepeatSystem(System):
 
     @property
     @override
-    def forces(
+    def strain_tensor(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+
+        from phonon_lifetime.pristine._pristine import PristineSystem  # noqa: PLC0415
+
+        if isinstance(self._system, PristineSystem):
+            return self._system.primitive_strain.calculate_full_tensor(self.n_repeats)
         raise NotImplementedError
 
     @property
@@ -52,17 +56,13 @@ class RepeatSystem(System):
 
         from phonon_lifetime.pristine._pristine import PristineSystem  # noqa: PLC0415
 
-        warnings.warn(
-            "Converting a RepeatSystem to a PristineSystem will currently set all forces to zero. This should be fixed in a future change.",
-            UserWarning,
-            stacklevel=2,
-        )
         return PristineSystem(
             primitive_masses=self._system.as_pristine().primitive_masses,
             primitive_symbols=self._system.as_pristine().primitive_symbols,
             primitive_cell=self.primitive_cell,
             n_repeats=self.n_repeats,
             primitive_atom_fractions=self._system.as_pristine().primitive_atom_fractions,
+            strain=self._system.as_pristine().primitive_strain,
         )
 
     @override

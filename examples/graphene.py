@@ -1,9 +1,11 @@
 from phonon_lifetime import pristine, system
-from phonon_lifetime.modes import animate_mode_xy
+from phonon_lifetime.modes import animate_mode_xy, repeat_mode
 
 if __name__ == "__main__":
-    graphene = system.build.graphene(mass=10, n_repeats=(6, 6, 1))
-    graphene = pristine.with_ase_forces(graphene, periodic=(True, True, False))
+    graphene = system.build.graphene(mass=10, n_repeats=(3, 3, 1))
+    graphene = pristine.with_ase_forces(
+        graphene, periodic=(True, True, False), n_repeats=(3, 3, 1)
+    )
 
     fig, ax, _ = system.plot_xyz(graphene, bond_cutoff=6)
     ax.set_title("Graphene Lattice")
@@ -18,7 +20,9 @@ if __name__ == "__main__":
     result = graphene.get_modes()
     mode = result.select_mode(branch=4, q=(1, 0, 0))
 
-    fig, ax, anim = animate_mode_xy(mode, bond_cutoff=6, scale_displacement=0.2)
+    fig, ax, anim = animate_mode_xy(
+        repeat_mode(mode, n_repeats=(2, 2, 1)), bond_cutoff=6, scale_displacement=0.2
+    )
     anim.save(
         "./examples/figures/graphene.mode_3d_animation.above.gif",
         dpi=300,

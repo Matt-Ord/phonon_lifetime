@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 from ase.filters import ExpCellFilter
@@ -7,6 +7,7 @@ from ase.neighborlist import neighbor_list
 from ase.optimize import BFGS  # cspell: disable-line
 from ase.phonons import Phonons
 
+from phonon_lifetime.forces import PristineStrainTensor
 from phonon_lifetime.system import as_primitive
 from phonon_lifetime.system._util import as_ase_atoms
 from phonon_lifetime.system.build import from_ase_atoms
@@ -46,34 +47,41 @@ def with_nearest_neighbor_forces(
 
     """
     as_pristine = system.as_pristine()
-    as_ase = as_ase_atoms(as_pristine)
+    n_repeats: tuple[int, int, int] = tuple(3 if p else 1 for p in periodic)  # ty:ignore[invalid-assignment]
+    n_primitive_atoms = system.n_primitive_atoms
+    data = np.zeros(
+        (n_primitive_atoms, np.prod(n_repeats) * n_primitive_atoms, 3, 3),
+        dtype=np.float64,
+    )
+
+    as_ase = as_ase_atoms(as_primitive(system)).repeat(n_repeats)
     as_ase.set_pbc(periodic)
-    forces = np.zeros_like(as_pristine.pristine_forces)
 
     locations_i, locations_j, directions = neighbor_list("ijD", as_ase, cutoff=cutoff)
     for i, j, d in zip(locations_i, locations_j, directions, strict=False):
-        if i >= forces.shape[0]:
+        if i >= data.shape[0]:
             continue
         direction = d / np.linalg.norm(d)
         np.testing.assert_allclose(1, np.linalg.norm(direction))
-        forces[i, j] -= spring_constant * np.outer(direction, direction)
-    for i in range(forces.shape[0]):
-        forces[i, i, :, :] -= np.sum(forces[i, :, :, :], axis=0)
-    return as_pristine.with_forces(forces=forces)
+        data[i, j] -= spring_constant * np.outer(direction, direction)
+    for i in range(data.shape[0]):
+        data[i, i, :, :] -= np.sum(data[i, :, :, :], axis=0)
+    return as_pristine.with_strain(PristineStrainTensor(data=data, n_repeats=n_repeats))
 
 
-def _phonopy_forces_from_ase(
+def _phonopy_strain_from_ase(
     ase_forces: np.ndarray[tuple[int, int, int], np.dtype[np.float64]],
     *,
     n_primitive_atoms: int,
-) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-    n_repeats = ase_forces.shape[0]
+    n_repeats: tuple[int, int, int],
+) -> PristineStrainTensor:
+    n_total_repeats = np.prod(n_repeats).item()
 
     # The ASE forces are in the shape (N, (u i), (v j)), where
     # N: Number of unit cells in supercell
     # (u i), (v j) are (n_primitive_atoms * 3) length flattend dimensions.
     reshaped_ase_forces = ase_forces.reshape(
-        n_repeats, n_primitive_atoms, 3, n_primitive_atoms, 3
+        n_total_repeats, n_primitive_atoms, 3, n_primitive_atoms, 3
     )
 
     # 2. Use einsum to rearrange
@@ -83,15 +91,30 @@ def _phonopy_forces_from_ase(
         reshaped_ase_forces,
     )
     # Phonopy convention: FC[unit_atom, super_atom, direction_i, direction_j]
-    return compact_fc.reshape(n_primitive_atoms, n_repeats * n_primitive_atoms, 3, 3)
+    data = compact_fc.reshape(
+        n_primitive_atoms, n_total_repeats * n_primitive_atoms, 3, 3
+    )
+    return PristineStrainTensor(data=data, n_repeats=n_repeats)
 
 
 def with_ase_forces(
     system: System,
     *,
     periodic: tuple[bool, bool, bool] = (True, True, True),
+    n_repeats: tuple[int, int, int] | None = None,
 ) -> PristineSystem:
-    """Return a new PristineSystem with forces calculated using ASE."""
+    """Return a new PristineSystem with forces calculated using ASE.
+
+    Parameters
+    ----------
+    system: System
+        The system to calculate forces for. The system should be a pristine system, or at least have a well defined primitive cell.
+    periodic: tuple[bool, bool, bool]
+        Whether to apply periodic boundary conditions in each direction when calculating forces. This will affect which atoms are considered nearest neighbors.
+    n_repeats: tuple[int, int, int] | None
+        The number of repeats to use when calculating forces. If None, will simulate the full system.
+
+    """
     pristine = system.as_pristine()
     ase_unitcell = as_ase_atoms(as_primitive(pristine))
     ase_unitcell.set_pbc(periodic)
@@ -108,14 +131,16 @@ def with_ase_forces(
     opt.run(fmax=1e-4)  # cspell: disable-line
 
     # Calculate forces on the supercell
-    ase_phonons = Phonons(ase_unitcell, calc, supercell=system.n_repeats)
+    n_repeats = system.n_repeats if n_repeats is None else n_repeats
+    ase_phonons = Phonons(ase_unitcell, calc, supercell=n_repeats)
     ase_phonons.cache.clear()
     ase_phonons.run()
     ase_phonons.read()
 
-    return from_ase_atoms(ase_unitcell, n_repeats=system.n_repeats).with_forces(
-        forces=_phonopy_forces_from_ase(
+    return from_ase_atoms(ase_unitcell, n_repeats=system.n_repeats).with_strain(
+        _phonopy_strain_from_ase(
             ase_phonons.get_force_constant(),
             n_primitive_atoms=system.n_primitive_atoms,
+            n_repeats=n_repeats,
         )
     )

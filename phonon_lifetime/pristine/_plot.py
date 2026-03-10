@@ -25,11 +25,10 @@ def plot_dispersion_1d(
     qx = q_vals[:, 0]
     energies = result.omega.reshape(*result.system.n_repeats)[:, *idx]
 
-    (line,) = ax.plot(
-        np.fft.fftshift(qx),  # cspell: disable-line
-        np.fft.fftshift(energies),  # cspell: disable-line
-    )
-
+    shifted_qx = np.fft.fftshift(qx)  # cspell: disable-line
+    if qx.shape[0] % 2 == 0:
+        shifted_qx[-1] = -0.5
+    (line,) = ax.plot(shifted_qx, np.fft.fftshift(energies))  # cspell: disable-line
     return fig, ax, line
 
 

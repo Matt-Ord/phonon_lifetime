@@ -7,6 +7,7 @@ import numpy as np
 from phonopy.api_phonopy import Phonopy
 from phonopy.structure.atoms import PhonopyAtoms
 
+from phonon_lifetime.forces import PristineStrainTensor, zero_strain_tensor
 from phonon_lifetime.modes._mode import NormalMode, NormalModes
 from phonon_lifetime.system._system import System
 
@@ -216,33 +217,10 @@ class PristineModes(NormalModes["PristineSystem"]):
         )
 
 
-def _recover_full_forces(
-    forces: np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]],
-    n_repeats: tuple[int, int, int],
-) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-    """Recover the full forces from the pristine forces."""
-    n_primitive = forces.shape[0]
-    n_atoms = forces.shape[1]
-    full_forces = np.zeros((n_atoms, n_atoms, 3, 3), dtype=np.float64)
-    for i in range(n_atoms):
-        i_in_primitive = i % n_primitive
-        c_i = np.unravel_index(i // n_primitive, n_repeats)
-        for j in range(n_atoms):
-            p_j = j % n_primitive
-            c_j = np.unravel_index(j // n_primitive, n_repeats)
-            cj_relative = tuple((c_j[d] - c_i[d]) % n_repeats[d] for d in range(3))
-
-            j_relative_to_i = (
-                np.ravel_multi_index(cj_relative, n_repeats) * n_primitive + p_j
-            )
-            full_forces[i, j] = forces[i_in_primitive, j_relative_to_i]
-    return full_forces  # ty:ignore[invalid-return-type]
-
-
 class PristineSystem(System):
     """Represents a System of atoms."""
 
-    _forces: np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]
+    _strain: PristineStrainTensor
 
     def __init__(  # noqa: PLR0913
         self,
@@ -251,10 +229,7 @@ class PristineSystem(System):
         primitive_cell: np.ndarray[tuple[int, int], np.dtype[np.floating]],
         primitive_atom_fractions: np.ndarray[tuple[int, int], np.dtype[np.floating]],
         n_repeats: tuple[int, int, int],
-        forces: np.ndarray[  # TODO: only store pristine forces? # noqa: FIX002
-            tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]
-        ]
-        | None = None,
+        strain: PristineStrainTensor | None = None,
         primitive_symbols: list[str] | None = None,
     ) -> None:
         self._primitive_masses = primitive_masses
@@ -266,18 +241,15 @@ class PristineSystem(System):
         self._primitive_cell = primitive_cell
         self._primitive_atom_fractions = primitive_atom_fractions
         self._n_repeats = n_repeats
-        if forces is None:
-            self._forces = np.zeros(  # ty:ignore[invalid-assignment]
-                (self.n_primitive_atoms, self.n_atoms, 3, 3),
-                dtype=np.float64,
-            )
+        if strain is None:
+            self._strain = zero_strain_tensor(self.primitive_masses.size)
         else:
-            self._forces = forces
+            self._strain = strain
         self._assert_valid()
 
     def _assert_valid(self) -> None:
-        if self._forces.shape != (self.n_primitive_atoms, self.n_atoms, 3, 3):
-            msg = f"Forces should have shape (n_primitive_atoms, n_atoms, 3, 3), but got {self._forces.shape}."
+        if self._strain.n_primitive_atoms != self.n_primitive_atoms:
+            msg = f"Strain tensor should have the same number of primitive atoms as the system, but got {self._strain.n_primitive_atoms} primitive atoms in strain tensor and {self.n_primitive_atoms} primitive atoms in the system."
             raise ValueError(msg)
 
         if self.primitive_cell.shape != (3, 3):
@@ -298,23 +270,20 @@ class PristineSystem(System):
         return self._primitive_cell
 
     @property
-    def pristine_forces(
-        self,
-    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        return self._forces
+    def primitive_strain(self) -> PristineStrainTensor:
+        """The strain tensor for the primitive system."""
+        return self._strain
 
     @property
     @override
-    def forces(
+    def strain_tensor(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        return _recover_full_forces(self._forces, self.n_repeats)
+        return self._strain.calculate_full_tensor(self.n_repeats)
 
-    def with_forces(
+    def with_strain(
         self,
-        forces: np.ndarray[
-            tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]
-        ],
+        strain: PristineStrainTensor,
     ) -> PristineSystem:
         """Return a new PristineSystem with the same properties but different forces."""
         return PristineSystem(
@@ -322,7 +291,7 @@ class PristineSystem(System):
             primitive_cell=self.primitive_cell,
             primitive_atom_fractions=self.primitive_atom_fractions,
             n_repeats=self.n_repeats,
-            forces=forces,
+            strain=strain,
         )
 
     @property
@@ -373,15 +342,23 @@ class PristineSystem(System):
             scaled_positions=self.primitive_atom_fractions,
         )
 
+        supercell_n = self.primitive_strain.n_repeats
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message=".*Point group symmetries.*")
             phonon = Phonopy(
                 unitcell=cell,
-                supercell_matrix=np.diag(self.n_repeats),
+                supercell_matrix=np.diag(supercell_n),
             )
 
-        phonon.force_constants = self.pristine_forces
-        phonon.run_mesh(self.n_repeats, with_eigenvectors=True, is_mesh_symmetry=False)
+        phonon.force_constants = self.primitive_strain.calculate_pristine_tensor(
+            supercell_n
+        )
+        phonon.run_mesh(
+            self.n_repeats,
+            with_eigenvectors=True,
+            is_mesh_symmetry=False,
+            is_gamma_center=True,
+        )
 
         mesh_dict = phonon.get_mesh_dict()
 

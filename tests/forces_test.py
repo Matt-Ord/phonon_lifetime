@@ -4,7 +4,10 @@ import numpy as np
 import pytest
 
 from phonon_lifetime import pristine
-from phonon_lifetime.pristine._pristine import _recover_full_forces  # noqa: PLC2701
+from phonon_lifetime.forces import (
+    _get_offset_in_initial,  # noqa: PLC2701
+    _recover_full_forces,  # noqa: PLC2701
+)
 from phonon_lifetime.system import build
 
 
@@ -122,13 +125,13 @@ def test_recover_full_forces() -> None:
     stiffness_tensor = rng.random(size=(3, 3))
     pristine = pristine_forces_from_stiffness_tensor_square(stiffness_tensor, (2, 2, 2))
     full = full_forces_from_stiffness_tensor_square(stiffness_tensor, (2, 2, 2))
-    restored = _recover_full_forces(pristine, (2, 2, 2))
+    restored = _recover_full_forces(pristine, (2, 2, 2), (2, 2, 2))
     np.testing.assert_allclose(restored, full)
 
 
 def test_build_force_matrix_x() -> None:
     spring_constant = 1
-    n_repeats = (37, 1, 1)
+    n_repeats = (4, 1, 1)
     system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
     system = pristine.with_nearest_neighbor_forces(
         system,
@@ -137,18 +140,18 @@ def test_build_force_matrix_x() -> None:
         cutoff=1.1,
     )
 
-    actual = system.forces
+    actual = system.strain_tensor
     desired = _build_pristine_force_constant_matrix_slow(
         (spring_constant, 0, 0), n_repeats
     )
     np.testing.assert_array_equal(actual, desired)
-    actual = system.pristine_forces
+    actual = system.primitive_strain.calculate_pristine_tensor(system.n_repeats)
     np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
 
 
 @pytest.mark.filterwarnings("ignore:Even n_repeats ")
 def test_build_force_matrix_y() -> None:
-    n_repeats = (1, 2, 1)
+    n_repeats = (1, 3, 1)
     spring_constant = 1
     system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
     system = pristine.with_nearest_neighbor_forces(
@@ -158,12 +161,12 @@ def test_build_force_matrix_y() -> None:
         cutoff=1.1,
     )
 
-    actual = system.forces
+    actual = system.strain_tensor
     desired = _build_pristine_force_constant_matrix_slow(
         (0, spring_constant, 0), n_repeats
     )
     np.testing.assert_array_equal(actual, desired)
-    actual = system.pristine_forces
+    actual = system.primitive_strain.calculate_pristine_tensor(system.n_repeats)
     np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
 
 
@@ -178,10 +181,31 @@ def test_build_force_matrix_explicit() -> None:
         cutoff=1.1,
     )
 
-    actual = system.forces
+    actual = system.strain_tensor
 
     np.testing.assert_array_equal(
         actual[:, :, 0, 0], np.array([[2, -1, -1], [-1, 2, -1], [-1, -1, 2]])
     )
     np.testing.assert_array_equal(actual[:, :, 1, 1], 0)
     np.testing.assert_array_equal(actual[:, :, 2, 2], 0)
+
+
+def test_get_offset_in_initial() -> None:
+    rng = np.random.default_rng()
+    for n in range(1, 10):
+        offsets = np.arange(-20, 20)
+        valid_offsets = np.fft.fftfreq(n, d=1 / n)  # cspell: disable-line
+
+        for offset in offsets:
+            initial = tuple(rng.integers(-100, 100, size=3))
+            final = (initial[0] + offset, initial[1], initial[2])
+            actual = _get_offset_in_initial(initial, final, (n, 1, 1), (50, 1, 1))
+            if offset in valid_offsets:
+                expected = offset % n
+                assert actual == expected, (
+                    f"Expected {expected} but got {actual} for offset {offset} and n {n}"
+                )
+            else:
+                assert actual is None, (
+                    f"Expected None but got {actual} for offset {offset} and n {n}"
+                )

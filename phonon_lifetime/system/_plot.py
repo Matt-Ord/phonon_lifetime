@@ -38,14 +38,12 @@ def plot_xyz(
     bonds = neighbor_list("ijD", as_ase, cutoff=bond_cutoff)
 
     if scale_bond_lines:
-        forces = system.forces
-
         unit_vectors = bonds[2] / np.linalg.norm(bonds[2], axis=1, keepdims=True)
         linewidths = np.abs(
             np.einsum(
                 "na, nab, nb -> n",
                 unit_vectors,
-                forces[bonds[0], bonds[1]],
+                system.strain_tensor[bonds[0], bonds[1]],
                 unit_vectors,
             )
         )

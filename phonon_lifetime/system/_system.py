@@ -21,12 +21,12 @@ class System(ABC):
 
     @property
     @abstractmethod
-    def forces(
+    def strain_tensor(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        """Force constant matrix for the system.
+        """Strain tensor matrix for the system.
 
-        Forces[i, j, alpha, beta] is the force constant between the i'th and j'th atom in the system, for each pair of cartesian directions (alpha, beta).
+        strain_tensor[i, j, alpha, beta] is the force constant between the i'th and j'th atom in the system, for each pair of cartesian directions (alpha, beta).
         """
 
     @property

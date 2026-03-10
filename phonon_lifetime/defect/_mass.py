@@ -86,10 +86,10 @@ class MassDefectSystem(System):
 
     @property
     @override
-    def forces(
+    def strain_tensor(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        return self._pristine.forces
+        return self._pristine.strain_tensor
 
     @property
     @override
@@ -131,8 +131,7 @@ class MassDefectSystem(System):
             unitcell=cell, supercell_matrix=np.eye(3), primitive_matrix=np.eye(3)
         )
 
-        pristine_force_constants = self.forces
-        phonon.force_constants = pristine_force_constants
+        phonon.force_constants = self.strain_tensor
 
         phonon.run_mesh((1, 1, 1), with_eigenvectors=True, is_mesh_symmetry=False)
 

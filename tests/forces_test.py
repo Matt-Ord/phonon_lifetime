@@ -3,53 +3,73 @@ from typing import Literal
 import numpy as np
 import pytest
 
-from phonon_lifetime import pristine
-from phonon_lifetime.forces import (
-    _get_offset_in_initial,  # noqa: PLC2701
-    _recover_full_forces,  # noqa: PLC2701
+import phonon_lifetime.cell.build as build_cell
+from phonon_lifetime.cell import SuperCell
+from phonon_lifetime.system import as_supercell, with_nearest_neighbor_forces
+from phonon_lifetime.system._system import (  # noqa: PLC2701
+    _get_offset_in_initial,
 )
-from phonon_lifetime.system import build
 
 
 def _build_pristine_force_constant_matrix_slow(
     spring_constant: tuple[float, float, float],
     n_repeats: tuple[int, int, int],
 ) -> np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]:
-    """Get the pristine force constant matrix."""
+    """Get the pristine force constant matrix.
+
+    Mirrors ``with_nearest_neighbor_forces`` behavior, where forces are computed
+    from the primitive cell to an expanded supercell with repeats ``3`` on
+    periodic axes and ``1`` otherwise.
+
+    """
     nx, ny, nz = n_repeats
     kx, ky, kz = spring_constant
+    strain_repeats = (
+        3 if kx != 0 else 1,
+        3 if ky != 0 else 1,
+        3 if kz != 0 else 1,
+    )
+    fx, fy, fz = (
+        nx * strain_repeats[0],
+        ny * strain_repeats[1],
+        nz * strain_repeats[2],
+    )
 
     def idx(ix: int, iy: int, iz: int) -> int:
-        return np.ravel_multi_index((ix, iy, iz), n_repeats).item()
+        return np.ravel_multi_index((ix, iy, iz), (fx, fy, fz)).item()
 
-    # 1) pristine fc on full grid
-    n = nx * ny * nz
+    # Build force constants on the expanded grid, then keep primitive rows.
+    n_primitive = nx * ny * nz
+    n = fx * fy * fz
     fc = np.zeros((n, n, 3, 3), float)
 
-    for ix in range(nx):
-        for iy in range(ny):
-            for iz in range(nz):
+    for ix in range(fx):
+        for iy in range(fy):
+            for iz in range(fz):
                 i = idx(ix, iy, iz)
 
-                jx_p = idx((ix + 1) % nx, iy, iz)
-                jx_m = idx((ix - 1) % nx, iy, iz)
-                fc[i, i, 0, 0] += 2 * kx
-                fc[i, jx_p, 0, 0] -= kx
-                fc[i, jx_m, 0, 0] -= kx
+                if kx != 0:
+                    jx_p = idx((ix + 1) % fx, iy, iz)
+                    jx_m = idx((ix - 1) % fx, iy, iz)
+                    fc[i, i, 0, 0] += 2 * kx
+                    fc[i, jx_p, 0, 0] -= kx
+                    fc[i, jx_m, 0, 0] -= kx
 
-                jy_p = idx(ix, (iy + 1) % ny, iz)
-                jy_m = idx(ix, (iy - 1) % ny, iz)
-                fc[i, i, 1, 1] += 2 * ky
-                fc[i, jy_p, 1, 1] -= ky
-                fc[i, jy_m, 1, 1] -= ky
+                if ky != 0:
+                    jy_p = idx(ix, (iy + 1) % fy, iz)
+                    jy_m = idx(ix, (iy - 1) % fy, iz)
+                    fc[i, i, 1, 1] += 2 * ky
+                    fc[i, jy_p, 1, 1] -= ky
+                    fc[i, jy_m, 1, 1] -= ky
 
-                jz_p = idx(ix, iy, (iz + 1) % nz)
-                jz_m = idx(ix, iy, (iz - 1) % nz)
-                fc[i, i, 2, 2] += 2 * kz
-                fc[i, jz_p, 2, 2] -= kz
-                fc[i, jz_m, 2, 2] -= kz
+                if kz != 0:
+                    jz_p = idx(ix, iy, (iz + 1) % fz)
+                    jz_m = idx(ix, iy, (iz - 1) % fz)
+                    fc[i, i, 2, 2] += 2 * kz
+                    fc[i, jz_p, 2, 2] -= kz
+                    fc[i, jz_m, 2, 2] -= kz
 
-    return fc
+    return fc[:n_primitive]
 
 
 def pristine_forces_from_stiffness_tensor_square(
@@ -120,71 +140,78 @@ def full_forces_from_stiffness_tensor_square(
     return fc
 
 
-def test_recover_full_forces() -> None:
-    rng = np.random.default_rng()
-    stiffness_tensor = rng.random(size=(3, 3))
-    pristine = pristine_forces_from_stiffness_tensor_square(stiffness_tensor, (2, 2, 2))
-    full = full_forces_from_stiffness_tensor_square(stiffness_tensor, (2, 2, 2))
-    restored = _recover_full_forces(pristine, (2, 2, 2), (2, 2, 2))
-    np.testing.assert_allclose(restored, full)
-
-
 def test_build_force_matrix_x() -> None:
     spring_constant = 1
     n_repeats = (4, 1, 1)
-    system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
-    system = pristine.with_nearest_neighbor_forces(
-        system,
+    cell = build_cell.cubic(mass=10, distance=1.0, structure="simple")
+    cell = SuperCell(cell, n_repeats=n_repeats)
+    system = with_nearest_neighbor_forces(
+        cell,
         spring_constant=spring_constant,
         periodic=(True, False, False),
         cutoff=1.1,
     )
 
-    actual = system.strain_tensor
+    actual = system.strain
     desired = _build_pristine_force_constant_matrix_slow(
         (spring_constant, 0, 0), n_repeats
     )
     np.testing.assert_array_equal(actual, desired)
-    actual = system.primitive_strain.calculate_pristine_tensor(system.n_repeats)
-    np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
+    system = with_nearest_neighbor_forces(
+        cell.primitive_cell,
+        spring_constant=spring_constant,
+        periodic=(True, False, False),
+        cutoff=1.1,
+    )
+    supercell_system = as_supercell(system, n_repeats=n_repeats)
+    actual = supercell_system.strain
+    np.testing.assert_array_equal(actual, desired)
 
 
 @pytest.mark.filterwarnings("ignore:Even n_repeats ")
 def test_build_force_matrix_y() -> None:
     n_repeats = (1, 3, 1)
     spring_constant = 1
-    system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
-    system = pristine.with_nearest_neighbor_forces(
-        system,
+    cell = build_cell.cubic(mass=10, distance=1.0, structure="simple")
+    cell = SuperCell(cell, n_repeats=n_repeats)
+    system = with_nearest_neighbor_forces(
+        cell,
         spring_constant=spring_constant,
         periodic=(False, True, False),
         cutoff=1.1,
     )
 
-    actual = system.strain_tensor
+    actual = system.strain
     desired = _build_pristine_force_constant_matrix_slow(
         (0, spring_constant, 0), n_repeats
     )
     np.testing.assert_array_equal(actual, desired)
-    actual = system.primitive_strain.calculate_pristine_tensor(system.n_repeats)
-    np.testing.assert_array_equal(actual, desired[0].reshape(1, -1, 3, 3))
+    system = with_nearest_neighbor_forces(
+        cell.primitive_cell,
+        spring_constant=spring_constant,
+        periodic=(False, True, False),
+        cutoff=1.1,
+    )
+    supercell_system = as_supercell(system, n_repeats=n_repeats)
+    actual = supercell_system.strain
+    np.testing.assert_array_equal(actual, desired)
 
 
 def test_build_force_matrix_explicit() -> None:
     n_repeats = (3, 1, 1)
     spring_constant = 1
-    system = build.cubic(mass=10, distance=1.0, n_repeats=n_repeats, structure="simple")
-    system = pristine.with_nearest_neighbor_forces(
-        system,
+    cell = build_cell.cubic(mass=10, distance=1.0, structure="simple")
+    cell = SuperCell(cell, n_repeats=n_repeats)
+    system = with_nearest_neighbor_forces(
+        cell,
         spring_constant=spring_constant,
         periodic=(True, False, False),
         cutoff=1.1,
     )
 
-    actual = system.strain_tensor
-
+    actual = system.strain
     np.testing.assert_array_equal(
-        actual[:, :, 0, 0], np.array([[2, -1, -1], [-1, 2, -1], [-1, -1, 2]])
+        actual[:, :3, 0, 0], np.array([[2, -1, 0], [-1, 2, -1], [0, -1, 2]])
     )
     np.testing.assert_array_equal(actual[:, :, 1, 1], 0)
     np.testing.assert_array_equal(actual[:, :, 2, 2], 0)

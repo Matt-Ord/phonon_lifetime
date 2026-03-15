@@ -1,52 +1,66 @@
 import matplotlib.pyplot as plt
 
-from phonon_lifetime import pristine
-from phonon_lifetime.modes import (
-    animate_mode_xy,
-    animate_mode_xyz,
-    plot_mode_xy,
+from phonon_lifetime.cell import build as build_cell
+from phonon_lifetime.phonon import (
+    CubicPoint,
+    DispersionPath,
+    animate_phonon_xy,
+    animate_phonon_xyz,
+    as_gamma_phonon,
+    get_dispersion_path,
+    get_mesh_phonons,
+    plot_dispersion_path,
+    plot_phonon_xy,
 )
-from phonon_lifetime.pristine import plot_dispersion_2d_xy
-from phonon_lifetime.system import build
+from phonon_lifetime.system import build as build_system
 
 if __name__ == "__main__":
-    system = build.cubic(
-        mass=10, distance=1.0, n_repeats=(11, 11, 1), structure="simple"
+    cell = build_cell.cubic(mass=10, distance=1.0, structure="simple")
+    system = build_system.with_nearest_neighbor_forces(
+        cell, spring_constant=1.0, periodic=(True, True, False), cutoff=1.1
     )
-    system = pristine.with_nearest_neighbor_forces(
-        system, spring_constant=1.0, periodic=(True, True, False), cutoff=1.1
-    )
-    result = system.get_modes()
+    result = get_mesh_phonons(system, n_repeats=(11, 11, 1))
 
-    mode = result.select_mode(branch=2, q=(1, 0, 0))
-    fig, ax, _ = plot_mode_xy(mode, bond_cutoff=5)
+    phonon = result.select_phonon(branch=2, iq=(1, 0, 0))
+    phonon = as_gamma_phonon(phonon)
+    fig, ax, _ = plot_phonon_xy(phonon, bond_cutoff=5)
     ax.set_title("Phonon Mode for 2D Surface")
-    fig.savefig("./examples/figures/2d_surface.mode.png", dpi=300)
+    fig.savefig("./examples/figures/2d_surface.phonon.png", dpi=300)
 
-    fig, ax, anim = animate_mode_xy(mode, bond_cutoff=5)
+    fig, ax, anim = animate_phonon_xy(phonon, bond_cutoff=5)
     ax.set_title("Phonon Mode for 2D Surface")
     anim.save(
-        "./examples/figures/2d_surface.mode_animation.gif", dpi=300, writer="pillow"
+        "./examples/figures/2d_surface.phonon_animation.gif", dpi=300, writer="pillow"
     )
 
-    fig, ax, anim = animate_mode_xyz(mode, bond_cutoff=5)
+    fig, ax, anim = animate_phonon_xyz(phonon, bond_cutoff=5)
     ax.view_init(elev=20, azim=90)  # View from the side (20 degrees above the plane)
     anim.save(
-        "./examples/figures/2d_surface.mode_3d_animation.side.gif",
+        "./examples/figures/2d_surface.phonon_3d_animation.side.gif",
         dpi=300,
         writer="pillow",
     )
 
     fig, ax = plt.subplots()
-    fig, ax, mesh = plot_dispersion_2d_xy(result.at_branch(2), ax=ax)
-    fig.colorbar(mesh, label="Energy (THz)")
+    result = get_dispersion_path(
+        system,
+        DispersionPath(
+            points=(
+                CubicPoint.GAMMA.value,
+                (20, CubicPoint.X.value),
+                (20, CubicPoint.M.value),
+                (20, CubicPoint.Y.value),
+                (20, CubicPoint.GAMMA.value),
+            ),
+        ),
+    )
+    fig, ax, line = plot_dispersion_path(result, branch=0, ax=ax)
+    line.set_label("Branch 0")
+    fig, ax, line = plot_dispersion_path(result, branch=1, ax=ax)
+    line.set_label("Branch 1")
+    fig, ax, line = plot_dispersion_path(result, branch=2, ax=ax)
+    line.set_label("Branch 2")
+    ax.legend()
 
-    ax.set_title("Phonon Dispersion Relation for 2D Surface")
-    fig.savefig("./examples/figures/2d_surface.dispersion.2.png", dpi=300)
-
-    fig, ax = plt.subplots()
-    fig, ax, mesh = plot_dispersion_2d_xy(result.at_branch(1), ax=ax)
-    fig.colorbar(mesh, label="Energy (THz)")
-
-    ax.set_title("Phonon Dispersion Relation for 2D Surface")
-    fig.savefig("./examples/figures/2d_surface.dispersion.1.png", dpi=300)
+    ax.set_title("Phonon Dispersion for 2D Surface")
+    fig.savefig("./examples/figures/2d_surface.dispersion.png", dpi=300)

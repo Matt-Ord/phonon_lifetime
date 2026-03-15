@@ -4,17 +4,17 @@ import numpy as np
 import scipy.linalg
 
 from phonon_lifetime._util import get_axis
-from phonon_lifetime.system import get_atom_centres
+from phonon_lifetime.cell import get_atom_positions
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    from phonon_lifetime.modes import NormalModes
+    from phonon_lifetime.phonon import Phonons
 
 
 def _get_wannier_vectors(
-    modes: NormalModes,
+    modes: Phonons,
 ) -> tuple[
     np.ndarray[tuple[int, int], np.dtype[np.complex128]],
     np.ndarray[tuple[int, int], np.dtype[np.complex128]],
@@ -32,7 +32,7 @@ def _get_wannier_vectors(
 
 
 def plot_wannier_vector(
-    modes: NormalModes,
+    modes: Phonons,
     idx: int = 0,
     *,
     ax: Axes | None = None,
@@ -47,7 +47,7 @@ def plot_wannier_vector(
         state = wannier_vectors[idx, :, i]
 
         ax.plot(
-            get_atom_centres(modes.system)[:, 0],
+            get_atom_positions(modes.system.cell)[:, 0],
             np.real(state),
             label=f"Wannier {idx} in {'xyz'[i]}",
         )

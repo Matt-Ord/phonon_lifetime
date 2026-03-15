@@ -9,12 +9,13 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from matplotlib.lines import Line2D
 
-    from phonon_lifetime.modes import NormalMode, NormalModes
-    from phonon_lifetime.pristine import PristineModes
+    from phonon_lifetime.phonon import GammaPhonon, GammaPhonons
+
+# TODO: Fundamental Phonon...
 
 
 def get_state_overlap_matrix(
-    pristine: NormalModes, defects: NormalModes
+    pristine: GammaPhonons, defects: GammaPhonons
 ) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
     """Calculate the overlap matrix S_ki = <d_k | p_i>."""
     states_p = pristine.vectors
@@ -25,8 +26,8 @@ def get_state_overlap_matrix(
 
 
 def calculate_survival_probabilities(
-    pristine: NormalModes,
-    defects: NormalModes,
+    pristine: GammaPhonons,
+    defects: GammaPhonons,
     *,
     times: np.ndarray[tuple[int], np.dtype[np.float64]],
 ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
@@ -51,7 +52,7 @@ def calculate_survival_probabilities(
 
 
 def get_state_overlap(
-    pristine: NormalMode, defects: NormalModes
+    pristine: GammaPhonon, defects: GammaPhonons
 ) -> np.ndarray[tuple[int], np.dtype[np.complex128]]:
     """Calculate the overlap matrix S_ki = <d_k | p_i>."""
     states_d = defects.vectors
@@ -61,7 +62,7 @@ def get_state_overlap(
 
 
 def calculate_finite_time_rates(
-    pristine: NormalModes, defects: NormalModes, *, t: float
+    pristine: GammaPhonons, defects: GammaPhonons, *, t: float
 ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
     """Calculate the finite-time decay rates of the pristine states after time t."""
     survival_p = calculate_survival_probabilities(
@@ -71,8 +72,8 @@ def calculate_finite_time_rates(
 
 
 def calculate_survival_probability(
-    pristine: NormalMode,
-    defects: NormalModes,
+    pristine: GammaPhonon,
+    defects: GammaPhonons,
     *,
     times: np.ndarray[tuple[int], np.dtype[np.float64]],
 ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
@@ -98,8 +99,8 @@ def calculate_survival_probability(
 
 
 def plot_survival_probability(
-    pristine: NormalMode,
-    defects: NormalModes,
+    pristine: GammaPhonon,
+    defects: GammaPhonons,
     times: np.ndarray[tuple[int], np.dtype[np.float64]],
     *,
     ax: Axes | None = None,
@@ -116,8 +117,8 @@ def plot_survival_probability(
 
 
 def plot_overlap_weights(
-    pristine: NormalModes,
-    defects: NormalModes,
+    pristine: GammaPhonons,
+    defects: GammaPhonons,
     pristine_idx: int,
     *,
     ax: Axes | None = None,
@@ -146,8 +147,8 @@ def plot_overlap_weights(
 
 
 def get_first_order_scatter(
-    pristine: NormalModes,
-    defects: NormalModes,
+    pristine: GammaPhonons,
+    defects: GammaPhonons,
 ) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
     """Calculate the first-order scattering matrix element <p_k|V|p_i>."""
     # overlap are W_ki = <\bar{psi}_k| |psi_i>
@@ -159,8 +160,8 @@ def get_first_order_scatter(
 
 
 def plot_first_order_scatter(
-    pristine: NormalModes,
-    defects: NormalModes,
+    pristine: GammaPhonons,
+    defects: GammaPhonons,
     pristine_idx: int,
     *,
     ax: Axes | None = None,
@@ -188,8 +189,8 @@ def plot_first_order_scatter(
 
 
 def plot_first_order_scatter_against_qx(
-    pristine: PristineModes,
-    defects: NormalModes,
+    pristine: GammaPhonons,
+    defects: GammaPhonons,
     pristine_idx: int,
     *,
     ax: Axes | None = None,
@@ -208,12 +209,12 @@ def plot_first_order_scatter_against_qx(
     for band in range(pristine.n_branch):
         band_indices = pristine.get_mode_idx(branch=band)
         (line,) = ax.plot(
-            np.fft.fftshift(pristine.q_vals[:, 0]),
+            np.fft.fftshift(pristine.q_values[:, 0]),
             np.fft.fftshift(weights[band_indices]),
         )
         line.set_marker("x")
 
-    line = ax.axvline(pristine[pristine_idx].q_val[0], linestyle="--")
+    line = ax.axvline(pristine[pristine_idx].q[0], linestyle="--")
     line.set_label("Pristine qx")
 
     ax.legend()
@@ -225,8 +226,8 @@ def plot_first_order_scatter_against_qx(
 
 
 def calculate_decay_rates(
-    pristine: NormalModes,
-    defects: NormalModes,
+    pristine: GammaPhonons,
+    defects: GammaPhonons,
     *,
     time: float,
 ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:

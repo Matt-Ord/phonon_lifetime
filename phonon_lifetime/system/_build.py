@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING
+from typing import Literal
 
 import numpy as np
 from ase.filters import ExpCellFilter
@@ -7,15 +7,8 @@ from ase.neighborlist import neighbor_list
 from ase.optimize import BFGS  # cspell: disable-line
 from ase.phonons import Phonons
 
-from phonon_lifetime.forces import PristineStrainTensor
-from phonon_lifetime.system import as_primitive
-from phonon_lifetime.system._util import as_ase_atoms
-from phonon_lifetime.system.build import from_ase_atoms
-
-if TYPE_CHECKING:
-    from phonon_lifetime import System
-
-    from ._pristine import PristineSystem
+from phonon_lifetime.cell import UnitCell, as_ase_atoms
+from phonon_lifetime.system._system import StrainSystem
 
 try:
     with warnings.catch_warnings():
@@ -33,28 +26,27 @@ except ImportError:
     pass
 
 
-def with_nearest_neighbor_forces(
-    system: System,
+def with_nearest_neighbor_forces[C: UnitCell](
+    cell: C,
     spring_constant: float,
     *,
     cutoff: float = 2.460,
     periodic: tuple[bool, bool, bool] = (True, True, True),
-) -> PristineSystem:
+) -> StrainSystem[C]:
     """Return a new PristineSystem with nearest neighbor forces added.
 
     The forces are added in the form of a spring force between nearest neighbor, with the given spring constant.
     The cutoff is used to determine which atoms are considered nearest neighbor.
 
     """
-    as_pristine = system.as_pristine()
     n_repeats: tuple[int, int, int] = tuple(3 if p else 1 for p in periodic)  # ty:ignore[invalid-assignment]
-    n_primitive_atoms = system.n_primitive_atoms
+    n_primitive_atoms = cell.n_atoms
     data = np.zeros(
         (n_primitive_atoms, np.prod(n_repeats) * n_primitive_atoms, 3, 3),
         dtype=np.float64,
     )
 
-    as_ase = as_ase_atoms(as_primitive(system)).repeat(n_repeats)
+    as_ase = as_ase_atoms(cell).repeat(n_repeats)
     as_ase.set_pbc(periodic)
 
     locations_i, locations_j, directions = neighbor_list("ijD", as_ase, cutoff=cutoff)
@@ -66,16 +58,17 @@ def with_nearest_neighbor_forces(
         data[i, j] -= spring_constant * np.outer(direction, direction)
     for i in range(data.shape[0]):
         data[i, i, :, :] -= np.sum(data[i, :, :, :], axis=0)
-    return as_pristine.with_strain(PristineStrainTensor(data=data, n_repeats=n_repeats))
+    return StrainSystem(cell=cell, strain=data, strain_repeats=n_repeats)
 
 
 def _phonopy_strain_from_ase(
     ase_forces: np.ndarray[tuple[int, int, int], np.dtype[np.float64]],
     *,
     n_primitive_atoms: int,
-    n_repeats: tuple[int, int, int],
-) -> PristineStrainTensor:
-    n_total_repeats = np.prod(n_repeats).item()
+    strain_repeats: tuple[int, int, int],
+) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+    """Convert the ASE force constants to the phonopy format."""
+    n_total_repeats = np.prod(strain_repeats).item()
 
     # The ASE forces are in the shape (N, (u i), (v j)), where
     # N: Number of unit cells in supercell
@@ -91,23 +84,22 @@ def _phonopy_strain_from_ase(
         reshaped_ase_forces,
     )
     # Phonopy convention: FC[unit_atom, super_atom, direction_i, direction_j]
-    data = compact_fc.reshape(
+    return compact_fc.reshape(
         n_primitive_atoms, n_total_repeats * n_primitive_atoms, 3, 3
     )
-    return PristineStrainTensor(data=data, n_repeats=n_repeats)
 
 
-def with_ase_forces(
-    system: System,
+def with_ase_forces[C: UnitCell](
+    cell: C,
     *,
     periodic: tuple[bool, bool, bool] = (True, True, True),
     n_repeats: tuple[int, int, int] | None = None,
-) -> PristineSystem:
-    """Return a new PristineSystem with forces calculated using ASE.
+) -> StrainSystem[C]:
+    """Return a new StrainSystem with forces calculated using ASE.
 
     Parameters
     ----------
-    system: System
+    cell: C
         The system to calculate forces for. The system should be a pristine system, or at least have a well defined primitive cell.
     periodic: tuple[bool, bool, bool]
         Whether to apply periodic boundary conditions in each direction when calculating forces. This will affect which atoms are considered nearest neighbors.
@@ -115,8 +107,7 @@ def with_ase_forces(
         The number of repeats to use when calculating forces. If None, will simulate the full system.
 
     """
-    pristine = system.as_pristine()
-    ase_unitcell = as_ase_atoms(as_primitive(pristine))
+    ase_unitcell = as_ase_atoms(cell)
     ase_unitcell.set_pbc(periodic)
     calc = mace_mp(
         model="mh-1",
@@ -131,16 +122,33 @@ def with_ase_forces(
     opt.run(fmax=1e-4)  # cspell: disable-line
 
     # Calculate forces on the supercell
-    n_repeats = system.n_repeats if n_repeats is None else n_repeats
-    ase_phonons = Phonons(ase_unitcell, calc, supercell=n_repeats)
+    strain_repeats = (
+        tuple[int, int, int](3 if p else 1 for p in periodic)  # ty:ignore[invalid-argument-type]
+        if n_repeats is None
+        else n_repeats
+    )
+    ase_phonons = Phonons(ase_unitcell, calc, supercell=strain_repeats)
     ase_phonons.cache.clear()
     ase_phonons.run()
     ase_phonons.read()
 
-    return from_ase_atoms(ase_unitcell, n_repeats=system.n_repeats).with_strain(
-        _phonopy_strain_from_ase(
+    return StrainSystem[C](
+        cell=cell,
+        strain=_phonopy_strain_from_ase(
             ase_phonons.get_force_constant(),
-            n_primitive_atoms=system.n_primitive_atoms,
-            n_repeats=n_repeats,
-        )
+            n_primitive_atoms=cell.n_atoms,
+            strain_repeats=strain_repeats,
+        ),
+        strain_repeats=strain_repeats,
     )
+
+
+def with_zero_forces[C: UnitCell](cell: C) -> StrainSystem[C]:
+    """Return a new StrainSystem with zero forces."""
+    n_repeats: tuple[int, int, int] = (1, 1, 1)
+    n_primitive_atoms = cell.n_atoms
+    data = np.zeros(
+        (n_primitive_atoms, np.prod(n_repeats) * n_primitive_atoms, 3, 3),
+        dtype=np.float64,
+    )
+    return StrainSystem(cell=cell, strain=data, strain_repeats=n_repeats)

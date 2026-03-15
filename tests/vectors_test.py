@@ -1,15 +1,20 @@
 import numpy as np
 
-from phonon_lifetime.defect import MassDefect, MassDefectSystem
-from phonon_lifetime.system import build
+from phonon_lifetime.cell import SuperCell
+from phonon_lifetime.cell import build as build_cell
+from phonon_lifetime.defect import MassDefect, with_mass_defect
+from phonon_lifetime.phonon import get_gamma_phonons
+from phonon_lifetime.system import with_zero_forces
 
 
 def test_mass_defect_vectors() -> None:
-    system = build.cubic(mass=10, distance=1, n_repeats=(7, 1, 1), structure="simple")
+    cell = build_cell.cubic(mass=10, distance=1, structure="simple")
+    cell = SuperCell(cell, n_repeats=(7, 1, 1))
 
-    defect = MassDefectSystem(pristine=system, defect=MassDefect(defects=[]))
+    system = with_zero_forces(cell)
+    defect = with_mass_defect(pristine=system, defects=MassDefect(defects=[]))
 
-    modes = defect.get_modes()
+    modes = get_gamma_phonons(defect)
     vectors = modes.vectors
 
     for i in range(modes.n_modes):

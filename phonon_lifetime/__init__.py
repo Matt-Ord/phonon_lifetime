@@ -1,11 +1,12 @@
 """An Example project."""
 
-from . import modes, pristine, system
-from .system import System
+from phonon_lifetime.system import StrainSystem
+
+from . import cell, phonon, system
 
 __all__ = [
-    "System",
-    "modes",
-    "pristine",
+    "StrainSystem",
+    "cell",
+    "phonon",
     "system",
 ]

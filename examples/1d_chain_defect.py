@@ -1,35 +1,39 @@
-from phonon_lifetime import pristine
+from phonon_lifetime.cell import SuperCell, build
 from phonon_lifetime.defect import (
     MassDefect,
-    MassDefectSystem,
     VacancyDefect,
-    VacancySystem,
+    with_mass_defect,
+    with_vacancy_defect,
 )
-from phonon_lifetime.modes import (
-    animate_mode_1d_x,
-    plot_mode_1d_x,
-    repeat_mode,
+from phonon_lifetime.phonon import (
+    animate_phonon_1d_x,
+    as_supercell_phonon,
+    get_gamma_phonon,
+    plot_phonon_1d_x,
 )
-from phonon_lifetime.system import build
+from phonon_lifetime.system import build as build_system
 
 if __name__ == "__main__":
-    system = build.cubic(
-        mass=10, distance=1.0, n_repeats=(101, 1, 1), structure="simple"
-    )
-    system = pristine.with_nearest_neighbor_forces(
-        system, spring_constant=1.0, periodic=(True, False, False), cutoff=1.1
+    cell = build.cubic(mass=10, distance=1.0, structure="simple")
+    strain_system = build_system.with_nearest_neighbor_forces(
+        SuperCell(cell, (101, 1, 1)),
+        spring_constant=1.0,
+        periodic=(True, False, False),
+        cutoff=1.1,
     )
 
-    vacancy_system = VacancySystem(
-        pristine=system,
-        defect=VacancyDefect(defects=[0]),
+    vacancy_system = with_vacancy_defect(
+        pristine=strain_system,
+        defects=VacancyDefect(defects=[]),
     )
-    mode = vacancy_system.get_mode(idx=203)
-    fig, ax, _ = plot_mode_1d_x(mode)
+    phonon = get_gamma_phonon(strain_system, branch=303 - 23)
+    print(phonon.omega)
+    fig, ax, _ = plot_phonon_1d_x(phonon)
     ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")
     fig.savefig("./examples/figures/1d_chain.vacancy_defect.mode.png", dpi=300)
 
-    fig, ax, anim = animate_mode_1d_x(repeat_mode(mode, n_repeats=(3, 1, 1)))
+    phonon = as_supercell_phonon(phonon, n_repeats=(3, 1, 1))
+    fig, ax, anim = animate_phonon_1d_x(phonon)
     ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")
     anim.save(
         "./examples/figures/1d_chain.vacancy_defect.mode_animation.gif",
@@ -37,19 +41,19 @@ if __name__ == "__main__":
         writer="pillow",
     )
 
-    mass_defect_system = MassDefectSystem(
-        pristine=system,
-        defect=MassDefect(defects=[(None, 1, 0)]),
+    mass_defect_system = with_mass_defect(
+        pristine=strain_system,
+        defects=MassDefect(defects=[(None, 1, 0)]),
     )
     # Branch 203 has the 0 atom stationary
     # Branch 204 the 0 mode moves, and this is a test of
     # us properly rescaling the mode displacements by the mass
-    mode = mass_defect_system.get_mode(idx=204)
-    fig, ax, _ = plot_mode_1d_x(mode)
+    phonon = get_gamma_phonon(mass_defect_system, branch=204)
+    fig, ax, _ = plot_phonon_1d_x(phonon)
     ax.set_title("Phonon Mode for 1D Chain with Mass Defect")
     fig.savefig("./examples/figures/1d_chain.mass_defect.mode.png", dpi=300)
 
-    fig, ax, anim = animate_mode_1d_x(mode)
+    fig, ax, anim = animate_phonon_1d_x(phonon)
     ax.set_title("Phonon Mode for 1D Chain with Mass Defect")
     anim.save(
         "./examples/figures/1d_chain.mass_defect.mode_animation.gif",

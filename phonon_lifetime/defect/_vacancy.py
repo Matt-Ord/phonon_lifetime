@@ -1,72 +1,12 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, override
+from typing import TYPE_CHECKING, Literal, override
 
 import numpy as np
-from phonopy.api_phonopy import Phonopy
-from phonopy.structure.atoms import PhonopyAtoms
 
-from phonon_lifetime import System
-from phonon_lifetime.modes import CanonicalMode, NormalModes
-from phonon_lifetime.system import (
-    get_atom_supercell_fractions,
-    get_supercell_cell,
-)
+from phonon_lifetime.defect._defect import DefectCell, UnitCell
 
 if TYPE_CHECKING:
-    from phonon_lifetime.pristine import PristineSystem
-
-
-class VacancyMode(CanonicalMode["VacancySystem"]):
-    """A normal mode of a vacancy defect system."""
-
-
-@dataclass(kw_only=True, frozen=True)
-class VacancyModes(NormalModes["VacancySystem"]):
-    """Result of a normal mode calculation for a phonon system."""
-
-    _system: VacancySystem
-    _omega: np.ndarray[Any, np.dtype[np.floating]]  # shape = (n_branch)
-    # modes with shape = (n_atoms * 3, n_branch)
-    _modes: np.ndarray[tuple[int, int], np.dtype[np.complex128]]
-
-    @property
-    @override
-    def omega(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
-        """A np.array of frequencies for each mode."""
-        return self._omega
-
-    @property
-    @override
-    def vectors(self) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
-        defective_modes = self._modes.reshape(-1, 3, self.n_modes)
-
-        out = np.zeros((self.system.n_atoms, 3, self.n_modes), dtype=np.complex128)
-        indices = np.delete(np.arange(self.system.n_atoms), self.system.defect.defects)
-        out[indices] = defective_modes
-        return out.reshape(self.system.n_atoms * 3, self.n_modes).T
-
-    @property
-    @override
-    def system(self) -> VacancySystem:
-        return self._system
-
-    @property
-    @override
-    def n_modes(self) -> int:
-        return self._omega.shape[0]
-
-    @override
-    def __getitem__(self, idx: int) -> VacancyMode:
-        defective_vector = self._modes[:, idx].reshape(-1, 3)
-        vector = np.zeros((self.system.n_atoms, 3), dtype=np.complex128)
-        indices = np.delete(np.arange(self.system.n_atoms), self.system.defect.defects)
-        vector[indices] = defective_vector
-
-        return VacancyMode(
-            system=self._system,
-            omega=self._omega[idx],
-            vector=vector,
-        )
+    from phonon_lifetime import StrainSystem
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -76,98 +16,61 @@ class VacancyDefect:
     defects: list[int]
 
 
-class VacancySystem(System):
-    """Represents a system with a vacancy."""
+class VacancyDefectCell[C: UnitCell = UnitCell](DefectCell[C]):
+    """A cell with a vacancy defect."""
 
     def __init__(
         self,
-        *,
-        pristine: PristineSystem,
-        defect: VacancyDefect,
+        pristine: C,
+        defects: VacancyDefect,
     ) -> None:
-        self._pristine = pristine
-        self._defect = defect
-
-    @property
-    def defect(self) -> VacancyDefect:
-        """The vacancy defect in the system."""
-        return self._defect
-
-    @property
-    @override
-    def primitive_cell(self) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
-        return self._pristine.primitive_cell
-
-    @property
-    @override
-    def strain_tensor(
-        self,
-    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
-        full_strain_tensor = self._pristine.strain_tensor
-        full_strain_tensor[self.defect.defects] = 0
-        full_strain_tensor[:, self.defect.defects] = 0
-        return full_strain_tensor
-
-    @property
-    @override
-    def n_repeats(self) -> tuple[int, int, int]:
-        return self._pristine.n_repeats
-
-    @override
-    def as_pristine(self) -> PristineSystem:
-        return self._pristine
-
-    @property
-    @override
-    def symbols(self) -> list[str]:
-        return self._pristine.symbols
+        super().__init__(pristine=pristine)
+        self._defects = defects
 
     @property
     @override
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
-        return self._pristine.masses
+        return np.delete(self._pristine.masses, self._defects.defects, axis=0)
+
+    @property
+    @override
+    def symbols(self) -> list[str]:
+        symbols = list(self._pristine.symbols)
+        for i in sorted(self._defects.defects, reverse=True):
+            del symbols[i]
+        return symbols
+
+    @property
+    @override
+    def atom_fractions(self) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
+        return np.delete(self._pristine.atom_fractions, self._defects.defects, axis=0)
 
     @override
-    def get_modes(self) -> VacancyModes:
-        vacancy = self.defect.defects
-        all_positions = get_atom_supercell_fractions(self)
+    def _get_defective_strain_tensor(
+        self, strain: StrainSystem[C]
+    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.floating]]:
+        strain_tensor = strain.strain
+        n_primitive = strain_tensor.shape[0]
+        n_cells = int(np.prod(strain.strain_repeats))
 
-        symbols = list(self.symbols)
-        for i in sorted(vacancy, reverse=True):
-            del symbols[i]
+        # Delete vacancies along axis 0 (the primitive cell)
+        defective_strain = np.delete(strain_tensor, self._defects.defects, axis=0)
 
-        cell = PhonopyAtoms(
-            symbols=symbols,
-            masses=np.delete(self.masses, vacancy, axis=0),
-            cell=get_supercell_cell(self),
-            scaled_positions=np.delete(all_positions, self.defect.defects, axis=0),
-        )
+        # Find the indices of these vacancies across the entire supercell (axis 1)
+        # Using the mapping: supercell_index = cell_idx * n_primitive + defect_idx
+        supercell_defects = [
+            cell_idx * n_primitive + defect_idx
+            for cell_idx in range(n_cells)
+            for defect_idx in self._defects.defects
+        ]
 
-        phonon = Phonopy(
-            unitcell=cell, supercell_matrix=np.eye(3), primitive_matrix=np.eye(3)
-        )
+        # Delete the repeating vacancies along axis 1 (the supercell)
+        return np.delete(defective_strain, supercell_defects, axis=1)
 
-        pristine_strain_tensor = self.strain_tensor
-        phonon.force_constants = np.delete(
-            np.delete(pristine_strain_tensor, vacancy, axis=0), vacancy, axis=1
-        )
 
-        phonon.run_mesh((1, 1, 1), with_eigenvectors=True, is_mesh_symmetry=False)
-
-        mesh_dict = phonon.get_mesh_dict()
-
-        return VacancyModes(
-            _system=self,
-            _omega=mesh_dict["frequencies"][0] * 2 * np.pi,
-            _modes=mesh_dict["eigenvectors"][0],
-        )
-
-    @property
-    def n_primitive_atoms(self) -> int:
-        return self._pristine.n_primitive_atoms
-
-    @property
-    def primitive_atom_fractions(
-        self,
-    ) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
-        return self._pristine.primitive_atom_fractions
+def with_vacancy_defect[C: UnitCell](
+    pristine: StrainSystem[C],
+    defects: VacancyDefect,
+) -> StrainSystem[VacancyDefectCell[C]]:
+    """Create a vacancy defect cell from a pristine cell."""
+    return VacancyDefectCell(pristine.cell, defects=defects).get_defect_strain(pristine)

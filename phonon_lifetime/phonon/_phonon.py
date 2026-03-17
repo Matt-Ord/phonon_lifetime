@@ -224,8 +224,7 @@ def get_phonon[S: StrainSystem = StrainSystem](
 ) -> Phonon[S]:
     """Get the normal mode of the system at a given q point and branch."""
     phonons = get_phonons(system, q_values=np.array([q]))
-    idx = phonons.get_mode_idx(branch=branch, iq=0)
-    return phonons[idx]
+    return phonons.select_phonon(branch=branch, iq=0)
 
 
 def _get_crystal_phases(

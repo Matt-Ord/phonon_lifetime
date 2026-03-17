@@ -40,7 +40,6 @@ def plot_xyz(
             np.einsum(
                 "na, nab, nb -> n",
                 unit_vectors,
-                # TODO: is this the right index in the supercell dimension?
                 system.strain[bonds[0], bonds[1]],
                 unit_vectors,
             )

@@ -19,7 +19,7 @@ try:
             "ignore", category=UserWarning, module="mace.calculators.mace"
         )
 
-        from mace.calculators import (  # ty:ignore[unresolved-import, unused-ignore-comment]
+        from mace.calculators import (  # ty:ignore[unresolved-import, unused-ignore-comment, unused-ignore-comment]
             mace_mp,
         )
 except ImportError:

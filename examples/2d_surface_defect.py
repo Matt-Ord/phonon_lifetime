@@ -20,11 +20,11 @@ if __name__ == "__main__":
     )
     phonon = get_gamma_phonons(vacancy_system)[11]
 
-    fig, ax, _ = plot_phonon_xy(phonon, bond_cutoff=1.1)
+    fig, ax, _ = plot_phonon_xy(phonon, scale_displacement=0.2)
     ax.set_title("Phonon Mode for 2D Surface")
     fig.savefig("./examples/figures/2d_surface.defect.mode.0.png", dpi=300)
 
-    fig, ax, anim = animate_phonon_xy(phonon, bond_cutoff=1.1)
+    fig, ax, anim = animate_phonon_xy(phonon, scale_displacement=0.2)
     ax.set_title("Phonon Mode for 2D Surface")
     anim.save(
         "./examples/figures/2d_surface.defect.mode_animation.0.gif",
@@ -38,11 +38,11 @@ if __name__ == "__main__":
     )
     phonon = get_gamma_phonons(vacancy_system)[10]
 
-    fig, ax, _ = plot_phonon_xy(phonon, bond_cutoff=1.1)
+    fig, ax, _ = plot_phonon_xy(phonon, scale_displacement=0.2)
     ax.set_title("Phonon Mode for 2D Surface")
     fig.savefig("./examples/figures/2d_surface.defect.mode.1.png", dpi=300)
 
-    fig, ax, anim = animate_phonon_xy(phonon, bond_cutoff=1.1)
+    fig, ax, anim = animate_phonon_xy(phonon, scale_displacement=0.2)
     ax.set_title("Phonon Mode for 2D Surface")
     anim.save(
         "./examples/figures/2d_surface.defect.mode_animation.1.gif",

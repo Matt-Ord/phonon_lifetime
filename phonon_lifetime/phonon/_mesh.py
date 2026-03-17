@@ -55,7 +55,8 @@ def get_mesh_phonons[S: StrainSystem = StrainSystem](
         omega=(mesh_dict["frequencies"] * 2 * np.pi).reshape(-1),
         vectors=mesh_dict["eigenvectors"].reshape(-1, system.cell.n_atoms, 3),
         n_repeats=n_repeats,
-        # q_vals=mesh_dict["qpoints"],  # cspell: disable-line #TODO: test
+        # TODO: test this matches manually generated q points when unit cell is odd
+        # q_vals=mesh_dict["qpoints"],  # cspell: disable-line
     )
 
 
@@ -198,7 +199,7 @@ class MeshPhonons[S: StrainSystem = StrainSystem](Phonons[S]):
             idx = self.get_mode_idx(branch=branch, iq=None)
             return cast(
                 "MeshPhonons[S]",
-                MeshPhonons(
+                MeshPhonons[S](
                     system=self.system,
                     omega=self.omega[idx],
                     vectors=self.vectors[idx],
@@ -215,7 +216,7 @@ class MeshPhonons[S: StrainSystem = StrainSystem](Phonons[S]):
         """The q values for each mode."""
         return (
             np.array(
-                np.meshgrid(  # TODO: test: at the moment this is wrong...
+                np.meshgrid(  # TODO: test: at the moment this might be wrong...
                     np.fft.fftfreq(self.n_repeats[0]),
                     np.fft.fftfreq(self.n_repeats[1]),
                     np.fft.fftfreq(self.n_repeats[2]),
@@ -232,6 +233,19 @@ class MeshPhonons[S: StrainSystem = StrainSystem](Phonons[S]):
     ) -> np.ndarray[tuple[int, int, Literal[3]], np.dtype[np.complex128]]:
         """The full vectors for each mode."""
         return self._vectors
+
+    def at_branch(self, branch: int) -> MeshPhonons[S]:
+        """Get all phonons at a given branch."""
+        idx = self.get_mode_idx(branch=branch, iq=None)
+        return cast(
+            "MeshPhonons[S]",
+            MeshPhonons[S](
+                system=self.system,
+                omega=self.omega[idx],
+                vectors=self.vectors[idx],
+                n_repeats=self.n_repeats,
+            ),
+        )
 
 
 class GammaPhonon[S: StrainSystem = StrainSystem](MeshPhonon[S]):

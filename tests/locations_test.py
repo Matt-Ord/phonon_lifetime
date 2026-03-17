@@ -10,7 +10,6 @@ def test_atom_fractions_square() -> None:
     cell = build_cell.cubic(mass=10, distance=1, structure="simple")
     cell = SuperCell(cell, n_repeats=(7, 3, 5))
     fractions = cell.primitive_cell.atom_fractions
-    print(fractions)
     np.testing.assert_array_almost_equal(fractions, [[0.0, 0.0, 0.0]])
 
     all_fractions = cell.atom_fractions

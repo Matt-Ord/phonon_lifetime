@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    from phonon_lifetime.phonon import Phonons
+    from phonon_lifetime.phonon import GammaPhonons, Phonons
 
 
 def _get_wannier_vectors(
@@ -20,7 +20,7 @@ def _get_wannier_vectors(
     np.ndarray[tuple[int, int], np.dtype[np.complex128]],
 ]:
     """Get the modes of the system using Wannier interpolation."""
-    phonon_vectors = modes.vectors
+    phonon_vectors = modes.vectors.reshape(modes.n_modes, -1)
     omega = modes.omega
 
     q, _r, _p = scipy.linalg.qr(phonon_vectors, pivoting=True)
@@ -32,7 +32,7 @@ def _get_wannier_vectors(
 
 
 def plot_wannier_vector(
-    modes: Phonons,
+    phonons: GammaPhonons,
     idx: int = 0,
     *,
     ax: Axes | None = None,
@@ -40,14 +40,14 @@ def plot_wannier_vector(
     """Plot the Wannier vectors of the system."""
     fig, ax = get_axis(ax)
 
-    wannier_vectors, _h_wannier = _get_wannier_vectors(modes)
-    wannier_vectors = wannier_vectors.reshape(modes.n_modes, -1, 3)
+    wannier_vectors, _h_wannier = _get_wannier_vectors(phonons)
+    wannier_vectors = wannier_vectors.reshape(phonons.n_modes, -1, 3)
 
     for i in range(3):
         state = wannier_vectors[idx, :, i]
 
         ax.plot(
-            get_atom_positions(modes.system.cell)[:, 0],
+            get_atom_positions(phonons.system.cell)[:, 0],
             np.real(state),
             label=f"Wannier {idx} in {'xyz'[i]}",
         )

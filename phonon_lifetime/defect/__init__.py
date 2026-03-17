@@ -2,6 +2,8 @@
 
 from ._defect import (
     DefectCell,
+    as_pristine_gamma_phonon,
+    as_pristine_gamma_phonons,
     as_pristine_phonon,
     as_pristine_phonons,
     as_pristine_strain_system,
@@ -15,6 +17,8 @@ __all__ = [
     "MassDefectCell",
     "VacancyDefect",
     "VacancyDefectCell",
+    "as_pristine_gamma_phonon",
+    "as_pristine_gamma_phonons",
     "as_pristine_phonon",
     "as_pristine_phonons",
     "as_pristine_strain_system",

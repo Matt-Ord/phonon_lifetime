@@ -55,6 +55,21 @@ class MassDefectCell[C: UnitCell = UnitCell](DefectCell[C]):
     ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.floating]]:
         return strain.strain
 
+    @override
+    def _get_pristine_strain_tensor(
+        self, strain: StrainSystem[C]
+    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.floating]]:
+        return strain.strain
+
+    @override
+    def _get_pristine_phonon_vectors(
+        self,
+        phonon_vectors: np.ndarray[
+            tuple[int, int, Literal[3]], np.dtype[np.complex128]
+        ],
+    ) -> np.ndarray[tuple[int, int, Literal[3]], np.dtype[np.complex128]]:
+        return phonon_vectors
+
 
 def with_mass_defect[C: UnitCell](
     pristine: StrainSystem[C],

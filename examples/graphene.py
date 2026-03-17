@@ -19,9 +19,7 @@ if __name__ == "__main__":
         graphene, periodic=(True, True, False), n_repeats=(4, 4, 1)
     )
 
-    strian_supercell = as_supercell(
-        as_supercell(strian, n_repeats=(5, 5, 1)), n_repeats=(3, 3, 1)
-    )
+    strian_supercell = as_supercell(strian, n_repeats=(5, 5, 1))
     fig, ax, _ = system.plot_xyz(strian_supercell, bond_cutoff=6)
     ax.set_title("Graphene Lattice")
     ax.view_init(elev=20, azim=90)  # View from the side (20 degrees above the plane)

@@ -11,18 +11,25 @@ if TYPE_CHECKING:
 
     from phonon_lifetime.phonon import GammaPhonon, GammaPhonons
 
-# TODO: Fundamental Phonon...
+
+def _assert_same_cell(
+    pristine: GammaPhonons | GammaPhonon, defects: GammaPhonons
+) -> None:
+    assert pristine.system.cell == defects.system.cell, (
+        "Pristine and defect systems must have the same cell"
+    )
 
 
 def get_state_overlap_matrix(
     pristine: GammaPhonons, defects: GammaPhonons
 ) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
     """Calculate the overlap matrix S_ki = <d_k | p_i>."""
+    _assert_same_cell(pristine, defects)
     states_p = pristine.vectors
     states_d = defects.vectors
 
     # Assuming states are rows, we take the conjugate of defect states and dot with pristine states
-    return np.einsum("kj,ij->ki", states_d.conj(), states_p)
+    return np.einsum("iab,jab->ij", states_d.conj(), states_p)
 
 
 def calculate_survival_probabilities(
@@ -55,10 +62,11 @@ def get_state_overlap(
     pristine: GammaPhonon, defects: GammaPhonons
 ) -> np.ndarray[tuple[int], np.dtype[np.complex128]]:
     """Calculate the overlap matrix S_ki = <d_k | p_i>."""
+    _assert_same_cell(pristine, defects)
     states_d = defects.vectors
 
     # Assuming states are rows, we take the conjugate of defect states and dot with pristine states
-    return np.einsum("kj,j->k", states_d.conj(), pristine.vector.ravel())
+    return np.einsum("ijk,jk->i", states_d.conj(), pristine.vector)
 
 
 def calculate_finite_time_rates(

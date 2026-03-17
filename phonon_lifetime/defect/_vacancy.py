@@ -67,6 +67,61 @@ class VacancyDefectCell[C: UnitCell = UnitCell](DefectCell[C]):
         # Delete the repeating vacancies along axis 1 (the supercell)
         return np.delete(defective_strain, supercell_defects, axis=1)
 
+    @override
+    def _get_pristine_strain_tensor(
+        self, strain: StrainSystem[C]
+    ) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.floating]]:
+        defect_strain = strain.strain
+        n_primitive = self._pristine.n_atoms
+        n_cells = int(np.prod(strain.strain_repeats))
+
+        defect_indices = set(self._defects.defects)
+        non_defect_indices = np.array(
+            [i for i in range(n_primitive) if i not in defect_indices],
+            dtype=np.int64,
+        )
+
+        expected_rows = len(non_defect_indices)
+        if defect_strain.shape[0] != expected_rows:
+            msg = (
+                "Input strain tensor shape does not match vacancy-defect cell size: "
+                f"expected {expected_rows} rows, got {defect_strain.shape[0]}."
+            )
+            raise ValueError(msg)
+
+        pristine_strain = np.zeros(
+            (n_primitive, n_primitive * n_cells, 3, 3),
+            dtype=defect_strain.dtype,
+        )
+
+        # Keep ordering consistent with _get_defective_strain_tensor: axis 1 is grouped
+        # by repeated cells, each containing only non-defect atoms.
+        pristine_axis_1 = (
+            np.arange(n_cells, dtype=np.int64)[:, None] * n_primitive
+            + non_defect_indices[None, :]
+        ).ravel()
+
+        pristine_strain[non_defect_indices[:, None], pristine_axis_1[None, :], :, :] = (
+            defect_strain
+        )
+
+        return pristine_strain
+
+    def _get_pristine_phonon_vectors(
+        self,
+        phonon_vectors: np.ndarray[
+            tuple[int, int, Literal[3]], np.dtype[np.complex128]
+        ],
+    ) -> np.ndarray[tuple[int, int, Literal[3]], np.dtype[np.complex128]]:
+        # Convert to shape (n_atoms, 3, n_modes) for easier manipulation
+        defective_modes = np.einsum("kij->ijk", phonon_vectors)
+
+        n_modes = phonon_vectors.shape[0]
+        out = np.zeros((self._pristine.n_atoms, 3, n_modes), dtype=np.complex128)
+        indices = np.delete(np.arange(self._pristine.n_atoms), self._defects.defects)
+        out[indices] = defective_modes
+        return np.einsum("ijk->kij", out)
+
 
 def with_vacancy_defect[C: UnitCell](
     pristine: StrainSystem[C],

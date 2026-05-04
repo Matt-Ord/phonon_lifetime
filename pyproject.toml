@@ -76,7 +76,7 @@ reportImplicitOverride = true
 reportUnknownMemberType = false
 
 [tool.setuptools.packages.find]
-include = ["phonon_lifetime"]
+include = ["phonon_lifetime*"]
 
 [build-system]
 requires = ["setuptools"]

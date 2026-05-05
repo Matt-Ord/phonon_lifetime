@@ -55,8 +55,8 @@ def get_mesh_phonons[S: StrainSystem = StrainSystem](
         omega=(mesh_dict["frequencies"] * 2 * np.pi).reshape(-1),  # ty:ignore[invalid-key]
         vectors=mesh_dict["eigenvectors"].reshape(-1, system.cell.n_atoms, 3),  # ty:ignore[invalid-argument-type, unresolved-attribute, invalid-key]
         n_repeats=n_repeats,
-        # TODO: test this matches manually generated q points when unit cell is odd
-        # q_vals=mesh_dict["qpoints"],  # cspell: disable-line
+        # TODO: test this matches manually generated q points when unit cell is odd  # noqa: FIX002
+        # the current q_vals=mesh_dict["qpoints"],  # cspell: disable-line
     )
 
 
@@ -219,7 +219,7 @@ class MeshPhonons[S: StrainSystem = StrainSystem](Phonons[S]):
         """The q values for each mode."""
         return (
             np.array(
-                np.meshgrid(  # TODO: test: at the moment this might be wrong...
+                np.meshgrid(  # TODO: test: at the moment this might be wrong...  # noqa: FIX002
                     np.fft.fftfreq(self.n_repeats[0]),
                     np.fft.fftfreq(self.n_repeats[1]),
                     np.fft.fftfreq(self.n_repeats[2]),

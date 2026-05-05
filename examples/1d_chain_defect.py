@@ -26,7 +26,7 @@ if __name__ == "__main__":
         pristine=strain_system,
         defects=VacancyDefect(defects=[]),
     )
-    phonon = get_gamma_phonon(strain_system, branch=303 - 23)
+    phonon = get_gamma_phonon(vacancy_system, branch=303 - 23)
     print(phonon.omega)
     fig, ax, _ = plot_phonon_1d_x(phonon)
     ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")

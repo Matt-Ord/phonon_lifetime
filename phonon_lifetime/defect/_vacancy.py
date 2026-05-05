@@ -105,7 +105,7 @@ class VacancyDefectCell[C: UnitCell = UnitCell](DefectCell[C]):
             defect_strain
         )
 
-        return pristine_strain
+        return pristine_strain  # ty:ignore[invalid-return-type]
 
     def _get_pristine_phonon_vectors(
         self,

@@ -320,7 +320,7 @@ def get_gamma_phonon[S: StrainSystem = StrainSystem](
 def as_gamma_phonons[C: UnitCell = UnitCell](
     phonons: MeshPhonons[StrainSystem[C]],
 ) -> GammaPhonons[StrainSystem[SuperCell[C]]]:
-    """Convert a phonon mesh of a primitive cell to a phonon mesh of the corresponding supercell."""
+    """Convert a phonon mesh of a primitive cell to Gamma phonons of the matching supercell."""
     repeat = as_supercell_phonons(phonons, phonons.n_repeats)
     return GammaPhonons[StrainSystem[SuperCell[C]]](
         system=repeat.system, omega=repeat.omega, vectors=repeat.vectors

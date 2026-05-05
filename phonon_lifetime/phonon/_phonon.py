@@ -234,7 +234,8 @@ def _get_crystal_phases(
     """Get the crystal phase of each atom in the system."""
     nx, ny, nz = n_repeats
     qx, qy, qz = q
-    # phase(i,j,k) = exp(2πi (qx*i/Nx + qy*j/Ny + qz*k/Nz) - i ω t)
+    # q is already expressed in reduced coordinates for the target supercell.
+    # phase(i,j,k) = exp(2πi (qx*i + qy*j + qz*k) - i ω t)
     phx = np.exp(2j * np.pi * qx * (np.arange(nx)))  # (Nx,)
     phy = np.exp(2j * np.pi * qy * (np.arange(ny)))  # (Ny,)
     phz = np.exp(2j * np.pi * qz * (np.arange(nz)))  # (Nz,)

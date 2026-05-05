@@ -55,8 +55,6 @@ def get_mesh_phonons[S: StrainSystem = StrainSystem](
         omega=(mesh_dict["frequencies"] * 2 * np.pi).reshape(-1),  # ty:ignore[invalid-key]
         vectors=mesh_dict["eigenvectors"].reshape(-1, system.cell.n_atoms, 3),  # ty:ignore[invalid-argument-type, unresolved-attribute, invalid-key]
         n_repeats=n_repeats,
-        # TODO: test this matches manually generated q points when unit cell is odd  # noqa: FIX002
-        # the current q_vals=mesh_dict["qpoints"],  # cspell: disable-line
     )
 
 
@@ -73,15 +71,24 @@ def get_mesh_phonon[S: StrainSystem = StrainSystem](
     )
 
 
+def fft_freq_with_nyquist(n: int) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+    """Get the FFT frequencies for a given number of points, with the Nyquist frequency negated to match phonopy."""
+    freq = np.fft.fftfreq(n)  # cspell: disable-line
+    if n % 2 == 0:
+        freq = freq.copy()
+        freq[n // 2] = -freq[n // 2]
+    return freq
+
+
 def _q_from_iq(
     iq: int | tuple[int, int, int], n_repeats: tuple[int, int, int]
 ) -> tuple[float, float, float]:
+    """Convert an index to q-values matching phonopy's q points convention."""
+    indices = iq_as_stacked(iq, n_repeats)
+    q_grids = [fft_freq_with_nyquist(n) for n in n_repeats]
     return cast(
         "tuple[float, float, float]",
-        tuple(
-            (i / n) if i < (n + 1) // 2 else ((i - n) / n)
-            for i, n in zip(iq_as_stacked(iq, n_repeats), n_repeats, strict=True)
-        ),
+        tuple(q_grids[i][indices[i]] for i in range(3)),
     )
 
 
@@ -89,7 +96,11 @@ def iq_as_flattened(
     iq: tuple[int, int, int] | int, n_repeats: tuple[int, int, int]
 ) -> int:
     """Convert a q point in the form of a tuple of integers to a flattened index."""
-    return iq if isinstance(iq, int) else np.ravel_multi_index(iq, n_repeats).item()
+    return (
+        iq
+        if isinstance(iq, int)
+        else np.ravel_multi_index(iq, n_repeats, order="F").item()
+    )
 
 
 def iq_as_stacked(
@@ -99,7 +110,10 @@ def iq_as_stacked(
     return (
         iq
         if isinstance(iq, tuple)
-        else tuple[int, int, int](x.item() for x in np.unravel_index(iq, n_repeats))  # ty:ignore[invalid-argument-type]
+        else tuple[int, int, int](
+            x.item()
+            for x in np.unravel_index(iq, n_repeats, order="F")  # ty:ignore[invalid-argument-type]
+        )
     )
 
 
@@ -216,18 +230,13 @@ class MeshPhonons[S: StrainSystem = StrainSystem](Phonons[S]):
     @cached_property
     @override
     def q_values(self) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
-        """The q values for each mode."""
-        return (
-            np.array(
-                np.meshgrid(  # TODO: test: at the moment this might be wrong...  # noqa: FIX002
-                    np.fft.fftfreq(self.n_repeats[0]),
-                    np.fft.fftfreq(self.n_repeats[1]),
-                    np.fft.fftfreq(self.n_repeats[2]),
-                )
-            )
-            .reshape(3, -1)
-            .T
-        )
+        """The q values for each mode. Computed to match phonopy's q points."""
+        q_grids = [fft_freq_with_nyquist(n) for n in self.n_repeats]
+
+        # Use meshgrid with reversed order to get correct iteration
+        grids = np.meshgrid(q_grids[2], q_grids[1], q_grids[0], indexing="ij")
+        # Swap back to [x, y, z] order
+        return np.array(grids[::-1]).reshape(3, -1).T
 
     @property
     @override

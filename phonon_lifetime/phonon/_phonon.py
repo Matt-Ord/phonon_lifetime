@@ -180,9 +180,9 @@ def _build_phonopy_system(system: StrainSystem) -> Phonopy:
     primitive_cell = system.cell
     cell = PhonopyAtoms(
         symbols=primitive_cell.symbols,
-        masses=primitive_cell.masses,
-        cell=primitive_cell.vectors,
-        scaled_positions=primitive_cell.atom_fractions,
+        masses=primitive_cell.masses.astype(np.float64),
+        cell=primitive_cell.vectors.astype(np.float64),
+        scaled_positions=primitive_cell.atom_fractions.astype(np.float64),
     )
 
     supercell_n = system.strain_repeats
@@ -193,7 +193,7 @@ def _build_phonopy_system(system: StrainSystem) -> Phonopy:
             supercell_matrix=np.diag(supercell_n),
         )
 
-    phonopy_system.force_constants = system.strain
+    phonopy_system.force_constants = system.strain.astype(np.float64)
     return phonopy_system
 
 
@@ -202,11 +202,11 @@ def get_phonons[S: StrainSystem = StrainSystem](
 ) -> Phonons[S]:
     """Get a set of phonons for the system."""
     phonopy_system = _build_phonopy_system(system)
-    phonopy_system.run_qpoints(q_values, with_eigenvectors=True)
+    phonopy_system.run_qpoints(q_values.astype(np.float64), with_eigenvectors=True)
 
     mesh_dict = phonopy_system.get_qpoints_dict()
     # eigenvectors in n_q, (n_atoms x 3), n_bands
-    vectors = np.einsum("ijk -> ikj", mesh_dict["eigenvectors"]).reshape(
+    vectors = np.einsum("ijk -> ikj", mesh_dict["eigenvectors"]).reshape(  # ty:ignore[no-matching-overload]
         -1, system.cell.n_atoms, 3
     )
     return Phonons(
@@ -263,7 +263,10 @@ def as_supercell_phonon[C: UnitCell = UnitCell](
         system=as_supercell(phonon.system, n_repeats),
         omega=phonon.omega,
         vector=_get_supercell_vector(phonon, n_repeats),
-        q=tuple(qi / n for qi, n in zip(phonon.q, n_repeats, strict=True)),
+        q=cast(
+            "tuple[float, float, float]",
+            tuple(qi / n for qi, n in zip(phonon.q, n_repeats, strict=True)),
+        ),
     )
 
 

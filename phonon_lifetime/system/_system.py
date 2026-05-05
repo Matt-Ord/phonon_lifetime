@@ -1,5 +1,5 @@
 import warnings
-from typing import Literal
+from typing import Literal, cast
 
 import numpy as np
 
@@ -92,8 +92,11 @@ def _get_repeated_strain(
         )
         warnings.warn(msg, UserWarning, stacklevel=3)
 
-    n_repeats_with_strain = tuple(
-        i * j for i, j in zip(n_repeats, strian_system.strain_repeats, strict=True)
+    n_repeats_with_strain = cast(
+        "tuple[int, int, int]",
+        tuple(
+            i * j for i, j in zip(n_repeats, strian_system.strain_repeats, strict=True)
+        ),
     )
     n_base_atoms = strian_system.cell.n_atoms
     n_new_repeats = np.prod(n_repeats).item()

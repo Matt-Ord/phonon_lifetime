@@ -27,9 +27,9 @@ def get_mesh_phonons[S: StrainSystem = StrainSystem](
     """Get the phonon mesh of the system."""
     cell = PhonopyAtoms(
         symbols=system.cell.symbols,
-        masses=system.cell.masses,
-        cell=system.cell.vectors,
-        scaled_positions=system.cell.atom_fractions,
+        masses=system.cell.masses.astype(np.float64),
+        cell=system.cell.vectors.astype(np.float64),
+        scaled_positions=system.cell.atom_fractions.astype(np.float64),
     )
 
     supercell_n = system.strain_repeats
@@ -40,7 +40,7 @@ def get_mesh_phonons[S: StrainSystem = StrainSystem](
             supercell_matrix=np.diag(supercell_n),
         )
 
-    phonon.force_constants = system.strain
+    phonon.force_constants = system.strain.astype(np.float64)
     phonon.run_mesh(
         n_repeats,
         with_eigenvectors=True,
@@ -50,10 +50,10 @@ def get_mesh_phonons[S: StrainSystem = StrainSystem](
 
     mesh_dict = phonon.get_mesh_dict()
 
-    return MeshPhonons(
+    return MeshPhonons[S](
         system=system,
-        omega=(mesh_dict["frequencies"] * 2 * np.pi).reshape(-1),
-        vectors=mesh_dict["eigenvectors"].reshape(-1, system.cell.n_atoms, 3),
+        omega=(mesh_dict["frequencies"] * 2 * np.pi).reshape(-1),  # ty:ignore[invalid-key]
+        vectors=mesh_dict["eigenvectors"].reshape(-1, system.cell.n_atoms, 3),  # ty:ignore[invalid-argument-type, unresolved-attribute, invalid-key]
         n_repeats=n_repeats,
         # TODO: test this matches manually generated q points when unit cell is odd
         # q_vals=mesh_dict["qpoints"],  # cspell: disable-line
@@ -76,9 +76,12 @@ def get_mesh_phonon[S: StrainSystem = StrainSystem](
 def _q_from_iq(
     iq: int | tuple[int, int, int], n_repeats: tuple[int, int, int]
 ) -> tuple[float, float, float]:
-    return tuple(
-        (i / n) if i < (n + 1) // 2 else ((i - n) / n)
-        for i, n in zip(iq_as_stacked(iq, n_repeats), n_repeats, strict=True)
+    return cast(
+        "tuple[float, float, float]",
+        tuple(
+            (i / n) if i < (n + 1) // 2 else ((i - n) / n)
+            for i, n in zip(iq_as_stacked(iq, n_repeats), n_repeats, strict=True)
+        ),
     )
 
 
@@ -231,7 +234,6 @@ class MeshPhonons[S: StrainSystem = StrainSystem](Phonons[S]):
     def vectors(
         self,
     ) -> np.ndarray[tuple[int, int, Literal[3]], np.dtype[np.complex128]]:
-        """The full vectors for each mode."""
         return self._vectors
 
     def at_branch(self, branch: int) -> MeshPhonons[S]:

@@ -50,10 +50,19 @@ def get_mesh_phonons[S: StrainSystem = StrainSystem](
 
     mesh_dict = phonon.get_mesh_dict()
 
+    omega = np.asarray(mesh_dict["frequencies"] * 2 * np.pi)  # ty:ignore[invalid-key]
+    n_q, n_branch = omega.shape
+
+    vectors = np.asarray(mesh_dict["eigenvectors"]).reshape(  # ty:ignore[invalid-key]
+        n_q, system.cell.n_atoms, 3, n_branch
+    )
+
     return MeshPhonons[S](
         system=system,
-        omega=(mesh_dict["frequencies"] * 2 * np.pi).reshape(-1),  # ty:ignore[invalid-key]
-        vectors=mesh_dict["eigenvectors"].reshape(-1, system.cell.n_atoms, 3),  # ty:ignore[invalid-argument-type, unresolved-attribute, invalid-key]
+        # Omega, stored as (i_q, i_branch)
+        omega=omega,
+        # cspell: disable-next-line  # noqa: ERA001
+        vectors=np.einsum("ijkl->iljk", vectors).reshape(-1, system.cell.n_atoms, 3),
         n_repeats=n_repeats,
     )
 

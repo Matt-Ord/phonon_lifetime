@@ -153,12 +153,8 @@ def test_mesh_phonons_supercell_energy() -> None:
 
     small_omega = np.sort(small_mesh.omega)
     big_omega = np.sort(big_mesh.omega)
-    np.testing.assert_allclose(
-        small_omega,
-        big_omega,
-        rtol=1e-5,
-        atol=1e-6,
-    )
+    # cspell:disable-next-line  # noqa: ERA001
+    np.testing.assert_allclose(small_omega, big_omega, rtol=1e-5, atol=1e-6)
 
 
 def _get_gamma_hamiltonian(
@@ -200,6 +196,7 @@ def test_mesh_phonons_supercell_hamiltonian() -> None:
     small_h = _get_gamma_hamiltonian(as_gamma_phonons(small_mesh))
     big_h = _get_gamma_hamiltonian(as_gamma_phonons(big_mesh))
 
+    # cspell:disable-next-line  # noqa: ERA001
     np.testing.assert_allclose(small_h, big_h, rtol=1e-5, atol=1e-3)
 
 

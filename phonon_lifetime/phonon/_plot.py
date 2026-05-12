@@ -174,7 +174,7 @@ def _set_segment_ticks(
 ) -> None:
     """Apply major labels, dynamic minor ticks, and vertical lines for a segment."""
     # 1. Steal Matplotlib's default tick spacing
-    default_ticks = ax.get_xticks()
+    default_ticks = ax.get_xticks()  # cspell:disable-line
     target_spacing = (
         default_ticks[1] - default_ticks[0] if len(default_ticks) > 1 else q[1] / 5.0
     )
@@ -182,11 +182,11 @@ def _set_segment_ticks(
     # 3. Calculate dynamic minor ticks based on the target spacing
     n_divs = max(3, round((q[1] - q[0]) / target_spacing))
     ticks = np.linspace(q[0], q[1], n_divs + 1)
-    ax.set_xticks(ticks, minor=True)
+    ax.set_xticks(ticks, minor=True)  # cspell:disable-line
     tick_labels = ["" for _ in ticks]
     tick_labels[0] = labels[0]
     tick_labels[-1] = labels[1]
-    ax.set_xticklabels(tick_labels)
+    ax.set_xticklabels(tick_labels)  # cspell:disable-line
     for pos in q:
         ax.axvline(pos, color="black", linestyle="-", linewidth=0.5)
 
@@ -230,7 +230,7 @@ def _get_relative_q_values_path(
 def _set_path_ticks(ax: Axes, labels: tuple[str, ...], q: tuple[float, ...]) -> None:
     """Apply major labels, dynamic minor ticks, and vertical lines for a path."""
     # 1. Steal Matplotlib's default tick spacing
-    default_ticks = ax.get_xticks()
+    default_ticks = ax.get_xticks()  # cspell:disable-line
     target_spacing = (
         default_ticks[1] - default_ticks[0] if len(default_ticks) > 1 else q[-1] / 5.0
     )
@@ -255,8 +255,8 @@ def _set_path_ticks(ax: Axes, labels: tuple[str, ...], q: tuple[float, ...]) -> 
         all_labels.extend(segment_labels)
 
     # 3. Apply the combined ticks and labels to the axis
-    ax.set_xticks(all_ticks)
-    ax.set_xticklabels(all_labels)
+    ax.set_xticks(all_ticks)  # cspell:disable-line
+    ax.set_xticklabels(all_labels)  # cspell:disable-line
 
     # 4. Add vertical lines exactly at the high-symmetry points
     for pos in q:

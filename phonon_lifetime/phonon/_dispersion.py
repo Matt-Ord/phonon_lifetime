@@ -101,7 +101,7 @@ class CubicPoint(Enum):
 
 
 class FaceCenteredCubicPoint(Enum):
-    """High-symmetry points for an FCC lattice (Standard Setyawan-Curtarolo convention)."""
+    """High-symmetry points for an FCC lattice (Standard Setyawan-Curtarolo convention)."""  # cspell:disable-line
 
     GAMMA = ("Γ", (0.0, 0.0, 0.0))
     X = ("X", (0.5, 0.0, 0.5))

@@ -176,6 +176,25 @@ class Phonons[S: StrainSystem = StrainSystem]:
         )
 
 
+def force_constants_from_strain(
+    system: StrainSystem,
+) -> np.ndarray[tuple[int, int, Literal[3], Literal[3]], np.dtype[np.float64]]:
+    """Convert the strain from the format used in StrainSystem to the format expected by Phonopy."""
+    strain = system.strain.astype(np.float64)
+    # Phonopy uses a different ordering to standard ASE conventions
+    return np.einsum(
+        # cspell:disable-next-line  # noqa: ERA001
+        "ijklm->ikjlm",
+        strain.reshape(
+            system.cell.n_atoms,
+            np.prod(system.strain_repeats).item(),
+            system.cell.n_atoms,
+            3,
+            3,
+        ),
+    ).reshape(strain.shape)
+
+
 def _build_phonopy_system(system: StrainSystem) -> Phonopy:
     primitive_cell = system.cell
     cell = PhonopyAtoms(
@@ -185,7 +204,7 @@ def _build_phonopy_system(system: StrainSystem) -> Phonopy:
         scaled_positions=primitive_cell.atom_fractions.astype(np.float64),
     )
 
-    supercell_n = system.strain_repeats
+    supercell_n = force_constants_from_strain(system)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=".*Point group symmetries.*")
         phonopy_system = Phonopy(
@@ -202,8 +221,9 @@ def get_phonons[S: StrainSystem = StrainSystem](
 ) -> Phonons[S]:
     """Get a set of phonons for the system."""
     phonopy_system = _build_phonopy_system(system)
+    # cspell:disable-next-line  # noqa: ERA001
     phonopy_system.run_qpoints(q_values.astype(np.float64), with_eigenvectors=True)
-
+    # cspell:disable-next-line  # noqa: ERA001
     mesh_dict = phonopy_system.get_qpoints_dict()
     # eigenvectors in n_q, (n_atoms x 3), n_bands
     vectors = np.einsum("ijk -> ikj", mesh_dict["eigenvectors"]).reshape(  # ty:ignore[no-matching-overload]

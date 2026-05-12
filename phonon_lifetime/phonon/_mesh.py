@@ -12,6 +12,7 @@ from phonon_lifetime.phonon._phonon import (
     Phonons,
     as_supercell_phonon,
     as_supercell_phonons,
+    force_constants_from_strain,
     get_phonon,
 )
 from phonon_lifetime.system import StrainSystem
@@ -40,18 +41,7 @@ def get_mesh_phonons[S: StrainSystem = StrainSystem](
             supercell_matrix=np.diag(supercell_n),
         )
 
-    strain = system.strain.astype(np.float64)
-    strain = np.einsum(
-        "ijklm->ikjlm",
-        strain.reshape(
-            system.cell.n_atoms,
-            np.prod(system.strain_repeats).item(),
-            system.cell.n_atoms,
-            3,
-            3,
-        ),
-    ).reshape(strain.shape)
-    phonon.force_constants = strain
+    phonon.force_constants = force_constants_from_strain(system)
     phonon.run_mesh(
         n_repeats,
         with_eigenvectors=True,

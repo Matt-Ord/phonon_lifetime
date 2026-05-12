@@ -46,6 +46,6 @@ def test_defective_hamiltonain() -> None:
     np.testing.assert_allclose(
         _get_gamma_hamiltonian(pristine_phonons),
         _get_gamma_hamiltonian(supercell_phonons),
-        rtol=1e-5,
+        rtol=1e-5,  # cspell:disable-line
         atol=1e-8,
     )

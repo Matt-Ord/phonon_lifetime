@@ -6,6 +6,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 from phonopy.api_phonopy import Phonopy
+from phonopy.phonon.tetrahedron_mesh import TetrahedronMesh
 from phonopy.structure.atoms import PhonopyAtoms
 
 
@@ -141,7 +142,46 @@ def build_force_constant_matrix(system):
     return fc
 
 
-def calculate_normal_modes(system: System) -> NormalModeResult:
+# def build_force_constant_matrix(system):
+#     Nx, Ny, Nz = system.n_repeats
+#     kx, ky, kz = system.spring_constant
+
+#     def idx(ix: int, iy: int, iz: int) -> int:
+#         return iz * (Nx * Ny) + iy * Nx + ix
+
+#     n = Nx * Ny * Nz
+#     fc = np.zeros((n, n, 3, 3), float)
+
+#     for iz in range(Nz):
+#         for iy in range(Ny):
+#             for ix in range(Nx):
+#                 i = idx(ix, iy, iz)
+
+#                 # x direction: acts on x displacement
+#                 jx_p = idx((ix + 1) % Nx, iy, iz)
+#                 jx_m = idx((ix - 1) % Nx, iy, iz)
+#                 fc[i, i, 0, 0] += 2 * kx
+#                 fc[i, jx_p, 0, 0] -= kx
+#                 fc[i, jx_m, 0, 0] -= kx
+
+#                 # y direction: acts on y displacement
+#                 jy_p = idx(ix, (iy + 1) % Ny, iz)
+#                 jy_m = idx(ix, (iy - 1) % Ny, iz)
+#                 fc[i, i, 1, 1] += 2 * ky
+#                 fc[i, jy_p, 1, 1] -= ky
+#                 fc[i, jy_m, 1, 1] -= ky
+
+#                 # z direction: acts on z displacement
+#                 jz_p = idx(ix, iy, (iz + 1) % Nz)
+#                 jz_m = idx(ix, iy, (iz - 1) % Nz)
+#                 fc[i, i, 2, 2] += 2 * kz
+#                 fc[i, jz_p, 2, 2] -= kz
+#                 fc[i, jz_m, 2, 2] -= kz
+
+#     return fc
+
+
+def run_phonon(system: System):
     masses = _build_masses_with_defects(system)
     cell = PhonopyAtoms(
         symbols=system.unit_symbols,
@@ -151,17 +191,67 @@ def calculate_normal_modes(system: System) -> NormalModeResult:
     )
     if system.defects is not None:
         supercell_matrix = np.diag([1.0, 1.0, 1.0])
-        mesh = [1.0, 1.0, 1.0]
     else:
         supercell_matrix = np.diag(system.n_repeats)
-        mesh = system.n_repeats
 
-    phonon = Phonopy(unitcell=cell, supercell_matrix=supercell_matrix)
+    return Phonopy(unitcell=cell, supercell_matrix=supercell_matrix)
 
-    phonon.force_constants = build_force_constant_matrix(system)
+
+def build_pristine_supercell_force_constants(system: System) -> np.ndarray:
+    Nx, Ny, Nz = system.n_repeats
+    kx, ky, kz = system.spring_constant
+
+    n = Nx * Ny * Nz
+    fc = np.zeros((n, n, 3, 3), float)
+
+    def idx(ix, iy, iz):
+        return (iy * Nx + ix) * Nz + iz
+
+    for ix in range(Nx):
+        for iy in range(Ny):
+            for iz in range(Nz):
+                i = idx(ix, iy, iz)
+
+                # x coupling
+                jp = idx((ix + 1) % Nx, iy, iz)
+                jm = idx((ix - 1) % Nx, iy, iz)
+                fc[i, i, 0, 0] += 2 * kx
+                fc[i, jp, 0, 0] -= kx
+                fc[i, jm, 0, 0] -= kx
+
+                # y coupling
+                jp = idx(ix, (iy + 1) % Ny, iz)
+                jm = idx(ix, (iy - 1) % Ny, iz)
+                fc[i, i, 1, 1] += 2 * ky
+                fc[i, jp, 1, 1] -= ky
+                fc[i, jm, 1, 1] -= ky
+
+                # z coupling, optional
+                if Nz > 1:
+                    jp = idx(ix, iy, (iz + 1) % Nz)
+                    jm = idx(ix, iy, (iz - 1) % Nz)
+                    fc[i, i, 2, 2] += 2 * kz
+                    fc[i, jp, 2, 2] -= kz
+                    fc[i, jm, 2, 2] -= kz
+
+    return fc
+
+
+def calculate_normal_modes(system: System) -> NormalModeResult:
+    phonon = run_phonon(system)
+    if system.defects is None:
+        phonon.force_constants = build_pristine_supercell_force_constants(system)
+        mesh = list(system.n_repeats)
+    else:
+        phonon.force_constants = build_force_constant_matrix(system)
+        mesh = [1, 1, 1]
+    mesh = [1, 1, 1] if system.defects is not None else list(system.n_repeats)
 
     phonon.run_mesh(mesh, with_eigenvectors=True, is_mesh_symmetry=False)
     mesh_dict = phonon.get_mesh_dict()
+
+    masses = np.asarray(phonon.unitcell.masses, float)
+
     return NormalModeResult(
         system=system,
         omega=mesh_dict["frequencies"] * 2 * np.pi,
@@ -183,30 +273,33 @@ class NormalModeResult:
 
     @property
     def vectors(self) -> np.ndarray:
-        # pristine case: build (Natom*3, Nband*Nq) from displacements
         if self.system.defects is None:
             q_vals = self.q_vals
             Nq = len(q_vals)
             Nband = 3
 
             mode0 = self.get_mode(0, q_vals[0])
-            disp0 = mode0.get_displacement(time=0)
-            v0 = disp0.reshape(-1)  # length = Natom*3
-            Natom = v0.size
+            v0 = mode0.vector.reshape(-1)
+            Natom3 = v0.size
 
-            out = np.empty((Natom, Nband * Nq), dtype=complex)
+            out = np.empty((Natom3, Nband * Nq), dtype=complex)
 
             col = 0
             for q in q_vals:
                 for b in range(Nband):
                     mode = self.get_mode(b, q)
-                    disp = mode.get_displacement(time=0)
-                    out[:, col] = disp.reshape(-1)  # flatten to (Natom*3,)
+                    v = mode.vector.reshape(-1)
+
+                    v /= np.linalg.norm(v)
+
+                    out[:, col] = v
                     col += 1
 
             return out
 
-        return self.modes[0]
+        psi_def = self.modes[0]
+        psi_def /= np.linalg.norm(psi_def, axis=0, keepdims=True)
+        return psi_def
 
     def get_mode(self, branch: int, q: tuple[float, float, float]) -> NormalMode:
         q_target = np.asarray(list(q), float)
@@ -246,16 +339,16 @@ class NormalMode:
         phy = np.exp(2j * np.pi * qy * (np.arange(ny)))  # (Ny,)
         phz = np.exp(2j * np.pi * qz * (np.arange(nz)))  # (Ny,)
         phase = (
-            phy[:, None, None] * phx[None, :, None] * phz[None, None, :]
+            phx[:, None, None] * phy[None, :, None] * phz[None, None, :]
         )  # column y first and then row x
         return (phase[..., None] * self.modes).ravel()  # (Nx,Ny,3)
 
     def get_displacement(self, time: float = 0.0) -> np.ndarray[Any, Any]:
         system = self.system
-        nx, ny, _nz = system.n_repeats
+        nx, ny, nz = system.n_repeats
         _qx, _qy, _qz = self.q_val
-        vector = self.vector
-        return vector.reshape((nx, ny, 3))
+        vector = self.vector * np.exp(1j * self.omega * time)
+        return vector.reshape((nx, ny, nz, 3))
         # * masses_2d ** (-1 / 2)
 
 
@@ -266,25 +359,62 @@ def Plot_displacement(
     """Quiver plot of displacement field u(x,y) for one NormalMode."""
     # call displacement
     displacement = mode.get_displacement(time=time)  # (nx, ny, 3)
+    print(displacement.shape, "Displacement")
     X, Y = mode.system.get_atom_centres()  # (nx, ny)
-    Ux = np.real(displacement[:, :, 0])  # (nx, ny)
-    Uy = np.real(displacement[:, :, 1])  # (nx, ny)
+    Ux = np.real(displacement[:, :, 0, 0])  # (nx, ny)
+    Uy = np.real(displacement[:, :, 0, 1])  # (nx, ny)
+    # X = X[::3]
+    # Y = Y[::3]
+    print(mode.omega)
 
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.quiver(X, Y, Ux, Uy, angles="xy", scale_units="xy")
-    ax.set_aspect("equal")
-    ax.set_aspect("equal")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_title("Displacement field (quiver)")
-    Ux = np.real(displacement[:, :, 0]).ravel()
-    Uy = np.real(displacement[:, :, 1]).ravel()
-    for x, y, ux, uy in zip(X, Y, Ux, Uy, strict=False):
-        label = f"({ux:.3g}, {uy:.3g})"
-        ax.text(x, y, label, fontsize=7, ha="center", va="bottom")
+    fig, ax = plt.subplots(figsize=(6.2, 6.0))
 
-    ax.margins(0.2)
-    # ax.set_xlim(-0.5 * a, 0.5 * a)  # padding in y
+    Ux = Ux.ravel()
+    Uy = Uy.ravel()
+    X = np.asarray(X).ravel()
+    Y = np.asarray(Y).ravel()
+
+    amp = np.sqrt(Ux**2 + Uy**2)
+    max_amp = np.max(amp)
+
+    scale_factor = 0.6 / max_amp if max_amp > 0 else 1.0
+
+    Ux_plot = Ux * scale_factor
+    Uy_plot = Uy * scale_factor
+
+    ax.scatter(
+        X,
+        Y,
+        s=14,
+        color="black",
+        alpha=0.5,
+    )
+
+    ax.quiver(
+        X,
+        Y,
+        Ux_plot,
+        Uy_plot,
+        angles="xy",
+        scale_units="xy",
+        scale=1,
+        width=0.007,
+        color="tab:blue",
+    )
+
+    ax.set_aspect("equal")
+    ax.set_xlabel(r"$x/a$", fontsize=12)
+    ax.set_ylabel(r"$y/a$", fontsize=12)
+
+    ax.set_title(
+        "Real-space displacement field ( t=0 )",
+        fontsize=13,
+        pad=10,
+    )
+
+    ax.grid(False)
+    ax.margins(0.12)
+
     fig.tight_layout()
     savepath = "./examples/Lifetime_Computation/Lifetime_results/quiver_vector.png"
     print(savepath)
@@ -318,8 +448,62 @@ def get_overlap_with_mode(
 ) -> np.ndarray:
     """Project a selected pristine state to all defected states."""
     pristine_vector = pristine_mode.vector
-    defected_vector = defected_mode.vectors
-    return np.einsum("i,ij->j", np.conj(pristine_vector), defected_vector)
+    defected_vectors = defected_mode.vectors
+    return np.einsum("i,ij->j", np.conj(pristine_vector), defected_vectors)
+
+
+def build_linear_test_frequencies(phonon, mesh_numbers, slope=10.0, band_mode="same"):
+    grid_address = phonon.mesh.grid_address
+    mesh = np.array(mesh_numbers, dtype=float)
+
+    num_gp = len(grid_address)
+    num_band = phonon.mesh.frequencies.shape[1]
+
+    frequencies = np.zeros((num_gp, num_band), dtype=float)
+
+    q_red = grid_address / mesh[None, :]
+
+    q_red[:, 0]
+    qy = q_red[:, 1]
+
+    # linear disperion, only depend on qx
+    omega_band2 = slope * np.abs(qy)
+    # omega_band1 = slope * (qy)
+    frequencies[:, 2] = omega_band2
+    # frequencies[:, 1] = omega_band1
+    return frequencies
+
+
+def delta_weights_ltm(phonon, mesh_numbers, omega_i) -> None:
+    phonon.run_mesh(mesh_numbers, is_mesh_symmetry=False)
+
+    test_frequencies = build_linear_test_frequencies(
+        phonon,
+        mesh_numbers,
+        slope=10.0,
+        band_mode="same",
+    )
+
+    thm = TetrahedronMesh(
+        cell=phonon.primitive,
+        frequencies=test_frequencies,
+        mesh=mesh_numbers,
+        grid_address=phonon.mesh.grid_address,
+        grid_mapping_table=phonon.mesh.grid_mapping_table,
+        ir_grid_points=phonon.mesh.ir_grid_points,
+    )
+
+    thm.set(value="I", frequency_points=[omega_i], lang="C")
+    weights = thm.run_all_q_weights()
+
+    for iq in range(weights.shape[0]):
+        print(
+            f"iq={iq}, q={phonon.mesh.qpoints[iq] if hasattr(phonon.mesh, 'qpoints') else iq}"
+        )
+        print(weights[iq, 0, :])
+
+    weights[:, 0, :]  # (num_ir_gp, num_band)
+    return weights
 
 
 def fermi_golden_rule2(
@@ -327,34 +511,65 @@ def fermi_golden_rule2(
     results2: NormalModeResult,  # defected
     band: int,
     q: tuple[float, float, float],
+    system: System,
+    sigma: float = 1,
 ) -> np.ndarray:
-    # reshape the pristines.modes form (Nq,3,Nb=3) to (3*Natom,3*Nq)
     psi_p = results1.vectors
-    omega_p = results1.omega.reshape(-1)
+    psi_def = results2.vectors
 
-    psi_def = results2.vectors  # (3*Natom,Nb=3*Nq)
     omega_def = results2.omega.reshape(-1)
+    omega_p = results1.omega.reshape(-1)
+    """
+    prisntine plot
 
+
+    Omegas = results1.omega.reshape(-1)
+
+    ix, iy = 3, 3
+    Nx = system.n_repeats[0]
+
+    atom_index = iy * Nx + ix
+    dof_slice = slice(3 * atom_index, 3 * atom_index + 3)
+
+    amp_p = np.sum(np.abs(psi_p[dof_slice, :]) ** 2, axis=0)
+
+    plt.figure(figsize=(6, 4))
+    plt.scatter(Omegas, amp_p, s=18)
+    plt.xlabel("Pristine mode frequency")
+    plt.ylabel("Pristine eigenvector weight at defect")
+    plt.title("Pristine eigenvector weight at defect")
+    plt.tight_layout()
+    plt.savefig("pristine_amp_vs_frequency.png", dpi=300)
+    print("pristine_amp_vs_frequency.png")
+    plt.close()
+    """
     # choose initial state |psi_i^p>
     mode_i = results1.get_mode(band, q)
-    psi_i = mode_i.vector  # (Natom*3,)
-
-    # P_im = <psi_i^p | psi_m^d>  shape (3*N_atoms,)
-    P_im = psi_i.conj() @ psi_def
-    # P_mj = <psi_m^d | psi_j^p>  shape (3*N_atoms,3*N_atoms )
+    psi_i = mode_i.vector
+    P_im = psi_i.conj().T @ psi_def
     P_mj = psi_def.conj().T @ psi_p
-
-    # matrix elements M_ij = Σ_m P_im (ω_m^d - ω_j^p) P_mj
-    # shape: (3*N_atoms,)
-    M_ij = np.einsum("m,mj,mj->j", P_im, (omega_def[:, None] - omega_p[None, :]), P_mj)
-    sigma = 0.1
-    omega_i = mode_i.omega
-    delta_E = omega_p - omega_i
-    gaussian_delta = (1.0 / (sigma * np.sqrt(2 * np.pi))) * np.exp(
-        -(delta_E**2) / (2 * sigma**2)
+    # <i_p | H_d | j_p>
+    Hd_ij = np.einsum(
+        "m,m,mj->j",
+        P_im,
+        omega_def,
+        P_mj,
     )
-    # scattering strength ~ |M_ij|^2
-    return np.abs(M_ij) ** 2 * gaussian_delta
+
+    # subtract <i_p | H_p | j_p> = omega_i delta_ij
+    j_i = np.argmax(np.abs(psi_p.conj().T @ psi_i))
+
+    M_ij = Hd_ij.copy()
+    M_ij[j_i] -= omega_p[j_i]
+    # manual Gaussian delta function: delta(omega_j - omega_i)
+    # sigma = np.max(omega_p) / 100
+    # omega_i = mode_i.omega
+    # weights = np.exp(-0.5 * ((omega_p - omega_i) / sigma) ** 2) / (
+    #     np.sqrt(2 * np.pi) * sigma
+    # )
+
+    # scattering strength
+    return np.abs(M_ij) ** 2
 
 
 def fermi_golden_rule(
@@ -391,44 +606,72 @@ def fermi_golden_rule(
 
 
 def Plot_scattering_rate(fig, ax, rate, res_pri, defect) -> None:
-    """Sort Omegas and scattering rates, then plot the rate-band_index curve."""
-    # flatten the pristine frequencies
+    """Sort modes by omega and plot scattering rate against sorted mode index."""
     Omegas = res_pri.omega.reshape(-1)
-    # sort the frequencies, then sort the scattering rate with the same indices
-    indices = np.argsort(Omegas)
-    Omegas = Omegas[indices]
-    rate = rate[indices]
-    # the x axis of plotting is band index, integers from 0 to N_states
-    x = np.arange(rate.shape[0])
-    # print the final states omegas which are expected to be equal to the initial
-    scattering_index = np.where(~np.isclose(rate, 0, atol=0.1))
-    Omegas = Omegas[scattering_index]
-    print(scattering_index)
-    print(Omegas)
-    # label: show defect position + mass
-    (ix, iy, iz), m = defect[0]
+    rate = rate.reshape(-1)
 
-    ax.plot(
+    # sort modes by omega
+    order = np.argsort(Omegas)
+    Omegas_sorted = Omegas[order]
+    rate_sorted = rate[order]
+
+    # x-axis: sorted mode index
+    x = Omegas_sorted
+    print(np.unique(Omegas_sorted))
+    rate_sorted /= np.max(rate_sorted)
+    rate_sorted[np.argmax(rate_sorted)] = 0
+
+    ax.scatter(
         x,
-        rate,
-        marker="o",
-        linewidth=1.2,
-        markersize=3.5,
-        label=f"defect@({ix},{iy},{iz}), m={m:g}",
+        rate_sorted,
+        s=18,
+        alpha=0.8,
     )
 
-    ax.set_xlabel("Final (defected) branch index")
-    ax.set_ylabel(r"Scattering rate (arb. units)")
-    ax.set_title("Scattering rate from defected branch into pristine branches")
+    ax.set_xlabel("Mode Frequency")
+    ax.set_ylabel(r"Scattering Rate")
+    ax.set_title("Scattering rate of a normal mode")
     ax.legend(frameon=False)
 
     return fig
 
 
+# def Plot_scattering_rate(fig, ax, rate, res_pri, defect) -> None:
+#     """Sort Omegas and scattering rates, then plot the rate-band_index curve."""
+#     # flatten the pristine frequencies
+#     Omegas = res_pri.omega.reshape(-1)
+#     rate = rate.reshape(-1)
+#     Max_rate = np.max(rate)
+#     x = np.arange(rate.shape[0])
+#     # print the final states omegas which are expected to be equal to the initial
+#     scattering_index = np.where(~np.isclose(rate, 0, atol=Max_rate / 5))
+#     Omegas = Omegas[scattering_index]
+#     # print(scattering_index)
+#     print("Scattering to States:", Omegas)
+#     # label: show defect position + mass
+#     # (ix, iy, iz), m = defect[0]
+#     q = np.array(defect) * 2 * np.pi
+#     ax.plot(
+#         x,
+#         rate,
+#         marker="o",
+#         linewidth=1.2,
+#         markersize=3.5,
+#         label=f"q={q}",
+#         # label=f"defect@({ix},{iy},{iz}), m={m:g}"
+#     )
+
+#     ax.set_xlabel("Final (defected) branch index")
+#     ax.set_ylabel(r"Scattering rate (arb. units)")
+#     ax.set_title("Scattering rate from defected branch into pristine branches")
+#     ax.legend(frameon=False)
+
+#     return fig
+
+
 def Plot_overlap(res_pri, res_def, band_q, q_pri) -> None:
     omega2 = res_def.omega.reshape(-1)
     pristine_mode = res_pri.get_mode(band_q, q_pri)
-    print(pristine_mode.omega, "Selected Omega")
     Normal = omega2.shape[0]
     overlap = get_overlap_with_mode(pristine_mode, res_def)
     overlap_abs = np.abs(overlap) / Normal * 3
@@ -450,3 +693,64 @@ def Plot_overlap(res_pri, res_def, band_q, q_pri) -> None:
     )
     plt.close(fig)
     print("./examples/Lifetime_Computation/Lifetime_results/overlap_vs_omega2.png")
+
+
+def Plot_weights(phonon, mesh_numbers, omega_min=None, omega_max=None, n_omega=200):
+    phonon.run_mesh(mesh_numbers, is_mesh_symmetry=False)
+
+    freqs = np.array(phonon.mesh.frequencies)
+
+    if omega_min is None:
+        omega_min = np.min(freqs)
+    if omega_max is None:
+        omega_max = np.max(freqs)
+
+    omega_grid = np.linspace(omega_min, omega_max, n_omega)
+    dos_values = []
+
+    for omega_i in omega_grid:
+        thm = TetrahedronMesh(
+            cell=phonon.primitive,
+            frequencies=phonon.mesh.frequencies,
+            mesh=mesh_numbers,
+            grid_address=phonon.mesh.grid_address,
+            grid_mapping_table=phonon.mesh.grid_mapping_table,
+            ir_grid_points=phonon.mesh.ir_grid_points,
+        )
+
+        thm.set(value="I", division_number=201, frequency_points=[omega_i], lang="C")
+
+        for _ in thm:
+            pass
+
+        weights = np.array(thm.get_integration_weights())
+
+        if weights.ndim == 3 and weights.shape[1] == 1:
+            weights_qb = weights[:, 0, :]
+        elif weights.ndim == 3 and weights.shape[0] == 1:
+            weights_qb = weights[0, :, :]
+        else:
+            weights_qb = np.squeeze(weights)
+
+        dos_values.append(np.sum(weights_qb))
+
+    dos_values = np.array(dos_values)
+
+    # phonopy built-in DOS for comparison
+    phonon.run_total_dos()
+    dos_dict = phonon.get_total_dos_dict()
+    freq_points = dos_dict["frequency_points"]
+    total_dos = dos_dict["total_dos"]
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(omega_grid, dos_values, label="manual LTM")
+    ax.plot(freq_points, total_dos, "--", label="phonopy total DOS")
+    ax.set_xlabel(r"$\omega$")
+    ax.set_ylabel("DOS")
+    ax.set_title("LTM scan")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig("./examples/ltm_weights_scan.png", dpi=300, bbox_inches="tight")
+    print("./examples/ltm_weights_scan.png")
+    return omega_grid, dos_values

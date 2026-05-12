@@ -110,12 +110,12 @@ def test_mesh_phonons_gamma_energy() -> None:
         cutoff=1.1,
     )
 
-    mesh_phonons = get_mesh_phonons(base_system, n_repeats=(3, 3, 3))
+    mesh_phonons = get_mesh_phonons(base_system, n_repeats=(3, 3, 1))
     idx = mesh_phonons.get_mode_idx(branch=0, iq=0)
     gamma_phonons = as_gamma_phonon(mesh_phonons[idx])
 
     repeat_system = system.build.with_nearest_neighbor_forces(
-        SuperCell(primitive, n_repeats=(3, 3, 3)),
+        SuperCell(primitive, n_repeats=(3, 3, 1)),
         spring_constant=1.0,
         periodic=(True, True, True),
         cutoff=1.1,

@@ -40,7 +40,18 @@ def get_mesh_phonons[S: StrainSystem = StrainSystem](
             supercell_matrix=np.diag(supercell_n),
         )
 
-    phonon.force_constants = system.strain.astype(np.float64)
+    strain = system.strain.astype(np.float64)
+    strain = np.einsum(
+        "ijklm->ikjlm",
+        strain.reshape(
+            system.cell.n_atoms,
+            np.prod(system.strain_repeats).item(),
+            system.cell.n_atoms,
+            3,
+            3,
+        ),
+    ).reshape(strain.shape)
+    phonon.force_constants = strain
     phonon.run_mesh(
         n_repeats,
         with_eigenvectors=True,

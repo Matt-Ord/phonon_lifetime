@@ -69,7 +69,7 @@ class Phonons[S: StrainSystem = StrainSystem]:
         self.__post_init__()
 
     def __post_init__(self) -> None:
-        if self._omega.shape[0] != self._vectors.shape[0]:
+        if self.omega.shape[0] != self._vectors.shape[0]:
             msg = f"Number of frequencies should match number of eigenvectors, but got {self._omega.shape[0]} frequencies and {self._vectors.shape[0]} eigenvectors."
             raise ValueError(msg)
         if self.system.cell.n_atoms != self._vectors.shape[1]:
@@ -205,7 +205,7 @@ def _build_phonopy_system(system: StrainSystem) -> Phonopy:
         scaled_positions=primitive_cell.atom_fractions.astype(np.float64),
     )
 
-    supercell_n = force_constants_from_strain(system)
+    supercell_n = system.strain_repeats
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=".*Point group symmetries.*")
         phonopy_system = Phonopy(
@@ -213,7 +213,7 @@ def _build_phonopy_system(system: StrainSystem) -> Phonopy:
             supercell_matrix=np.diag(supercell_n),
         )
 
-    phonopy_system.force_constants = system.strain.astype(np.float64)
+    phonopy_system.force_constants = force_constants_from_strain(system)
     return phonopy_system
 
 

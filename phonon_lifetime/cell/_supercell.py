@@ -57,3 +57,15 @@ class SuperCell[C: UnitCell](UnitCell):
             .repeat(self._n_repeats)
             .get_scaled_positions()
         )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SuperCell):
+            return False
+
+        return (
+            self.primitive_cell == other.primitive_cell
+            and self.n_repeats == other.n_repeats
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.primitive_cell, self.n_repeats))

@@ -1,9 +1,10 @@
 from typing import TYPE_CHECKING, override
 
+import numpy as np
+
 from ._cell import UnitCell
 
 if TYPE_CHECKING:
-    import numpy as np
     from ase import Atoms
 
 
@@ -68,6 +69,26 @@ class PrimitiveCell(UnitCell):
     @override
     def atom_fractions(self) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
         return self._atom_fractions
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, PrimitiveCell):
+            return NotImplemented
+        return (
+            np.allclose(self.masses, other.masses)
+            and self.symbols == other.symbols
+            and np.allclose(self.vectors, other.vectors)
+            and np.allclose(self.atom_fractions, other.atom_fractions)
+        )
+
+    def __hash__(self) -> int:
+        return hash(
+            (
+                tuple(self.masses),
+                tuple(self.symbols),
+                tuple(map(tuple, self.vectors)),
+                tuple(map(tuple, self.atom_fractions)),
+            )
+        )
 
 
 def from_ase_atoms(atoms: Atoms) -> PrimitiveCell:

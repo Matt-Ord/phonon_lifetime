@@ -7,7 +7,7 @@ from phonon_lifetime.phonon import get_gamma_phonons
 from phonon_lifetime.system import with_zero_forces
 
 
-def test_mass_defect_vectors() -> None:
+def test_zero_mass_defect_vectors() -> None:
     cell = build_cell.cubic(mass=10, distance=1, structure="simple")
     cell = SuperCell(cell, n_repeats=(7, 1, 1))
 

@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     vacancy_system = with_vacancy_defect(
         pristine=as_supercell(system, n_repeats=(3, 3, 1)),
-        defects=VacancyDefect(defects=[]),
+        defects=VacancyDefect(defects=[0]),
     )
     phonon = get_gamma_phonons(vacancy_system)[11]
 

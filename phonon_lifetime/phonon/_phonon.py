@@ -66,6 +66,7 @@ class Phonons[S: StrainSystem = StrainSystem]:
         self._omega = omega
         self._q_values = q_values
         self._vectors = vectors
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         if self._omega.shape[0] != self._vectors.shape[0]:

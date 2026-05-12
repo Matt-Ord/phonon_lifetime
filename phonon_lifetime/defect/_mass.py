@@ -33,7 +33,7 @@ class MassDefectCell[C: UnitCell = UnitCell](DefectCell[C]):
     @property
     @override
     def masses(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
-        masses = self._pristine.masses
+        masses = self._pristine.masses.copy()
         for _symbol, mass, index in self._defects.defects:
             masses[index] = mass
         return masses
@@ -41,7 +41,7 @@ class MassDefectCell[C: UnitCell = UnitCell](DefectCell[C]):
     @property
     @override
     def symbols(self) -> list[str]:
-        symbols = self._pristine.symbols
+        symbols = self._pristine.symbols.copy()
         for symbol, _mass, index in self._defects.defects:
             if symbol is not None:
                 symbols[index] = symbol

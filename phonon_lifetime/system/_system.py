@@ -55,7 +55,7 @@ class StrainSystem[C: UnitCell = UnitCell]:
             msg = f"Number of atoms in the cell should match the second dimension of the strain, but got {self._cell.n_atoms} atoms and strain with shape {self._strain.shape}."
             raise ValueError(msg)
         if np.prod(self._strain_repeats) * self._cell.n_atoms != self._strain.shape[1]:
-            msg = f"Product of strain_repeats should match the first dimension of the strain, but got strain_repeats={self._strain_repeats} and strain with shape {self._strain.shape}."
+            msg = f"Product of strain_repeats should match the second dimension of the strain, but got strain_repeats={self._strain_repeats} and strain with shape {self._strain.shape}."
             raise ValueError(msg)
 
     @property

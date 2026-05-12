@@ -44,7 +44,7 @@ def plot_xyz(
                 unit_vectors,
             )
         )
-        linewidths /= np.max(np.abs(linewidths))
+        linewidths /= max(np.max(np.abs(linewidths)), 1e-6)
 
         line_collection.set_linewidth(linewidths)
 

@@ -124,7 +124,6 @@ def build_force_constant_matrix(system):
     # 3) apply vacancy by removing bonds to that site
     vx, vy, _vz = system.vacancy
     iv = idx(vx, vy)
-
     # four neighbors of vacancy (periodic)
     in_xp = idx((vx + 1) % Nx, vy)  # right neighbor
     in_xm = idx((vx - 1) % Nx, vy)  # left neighbor
@@ -158,6 +157,7 @@ class NormalModeResult:
         dq = self.q_vals - q_target[None, :]
         dq -= np.rint(dq)
         iq = int(np.argmin(np.sum(dq * dq, axis=1)))
+        print(self.q_vals[iq, :])
         if self.system.vacancy is not None:
             return DefectedNormalMode(
                 _system=self.system,
@@ -181,13 +181,15 @@ def calculate_normal_modes(system: System) -> NormalModeResult:
     )
     if system.vacancy is not None:
         supercell_matrix = np.diag([1.0, 1.0, 1.0])
+        mesh = [1.0, 1.0, 1.0]
     else:
         supercell_matrix = np.diag(system.n_repeats)
+        mesh = system.n_repeats
     phonon = Phonopy(unitcell=cell, supercell_matrix=supercell_matrix)
 
     phonon.force_constants = build_force_constant_matrix(system)
 
-    phonon.run_mesh(system.n_repeats, with_eigenvectors=True, is_mesh_symmetry=False)
+    phonon.run_mesh(mesh, with_eigenvectors=True, is_mesh_symmetry=False)
 
     mesh_dict = phonon.get_mesh_dict()
 
@@ -229,9 +231,9 @@ class PristineNormalMode(NormalMode):
         qx, qy, qz = self.q_val
         print("Calling Pristine Mode")
         # phase(i,j) = exp(2πi (qx*i/Nx + qy*j/Ny) - i ω t)
-        phx = np.exp(2j * np.pi * qx * (np.arange(nx) / nx))  # (Nx,)
-        phy = np.exp(2j * np.pi * qy * (np.arange(ny) / ny))  # (Ny,)
-        phz = np.exp(2j * np.pi * qz * (np.arange(nz) / nz))  # (Ny,)
+        phx = np.exp(2j * np.pi * qx * (np.arange(nx)))  # (Nx,)
+        phy = np.exp(2j * np.pi * qy * (np.arange(ny)))  # (Ny,)
+        phz = np.exp(2j * np.pi * qz * (np.arange(nz)))  # (Ny,)
         phase = (
             phx[:, None, None]
             * phy[None, :, None]
@@ -272,16 +274,17 @@ class DefectedNormalMode(NormalMode):
         gy = gy[occ]
         gz = gz[occ]
         # now shape: (n_atom,)
-        len(gx)
-        len(gy)
+        n_atom = len(gx)
+        print(n_atom)
         evec = self.modes
-        evec = evec.reshape(8, 3)
+        print(evec.shape)
+        Tot_evec = np.zeros((n_atom, 3), dtype=np.complex128)
+        for i in range(evec.shape[0]):
+            Tot_evec += evec[i, :].reshape(n_atom, 3)
 
         # 3) phase factor per atom
         phase = np.exp(2j * np.pi * (qx * (gx / nx) + qy * (gy / ny) + qz * (gz / nz)))
-        print(phase)
-        print(evec)
-        return np.real(phase[..., None] * evec)
+        return np.real(phase[..., None] * Tot_evec)
 
 
 def Plot_displacement(
@@ -298,14 +301,91 @@ def Plot_displacement(
     u = mode.get_displacement()
     X, Y = mode.system.get_atom_centres()
     fig, ax = plt.subplots(figsize=(6, 6))
+    # if vacancy is None:
+    #     ax.quiver(
+    #         X, Y, u[:, :, 0, 0], u[:, :, 0, 1], angles="xy", scale_units="xy", scale=1.0
+    #     )
+    # else:
+    #     ax.quiver(X, Y, u[:, 0], u[:, 1], angles="xy", scale_units="xy", scale=1.0)
+    # # ax.set_aspect("equal")
+    # ax.set_xlabel("x")
+    # ax.set_ylabel("y")
+    # ax.margins(0.5)
+    # return fig
+
     if vacancy is None:
-        ax.quiver(
-            X, Y, u[:, :, 0, 0], u[:, :, 0, 1], angles="xy", scale_units="xy", scale=1.0
-        )
+        ux = u[:, :, 0, 0].ravel()
+        uy = u[:, :, 0, 1].ravel()
     else:
-        ax.quiver(X, Y, u[:, 0], u[:, 1], angles="xy", scale_units="xy", scale=1.0)
-    ax.set_aspect("equal")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.margins(0.5)
+        # defected: u shape = (Natom, 3)
+        ux = u[:, 0]
+        uy = u[:, 1]
+
+    # flatten coordinates
+    x = np.asarray(X).ravel()
+    y = np.asarray(Y).ravel()
+
+    # ---- plotting ----
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4))
+
+    # ux vs x
+    ax[0].scatter(x, ux)
+    ax[0].set_xlabel("x")
+    ax[0].set_ylabel("u_x")
+    ax[0].set_title("u_x vs x")
+    ax[0].grid(True)
+
+    # uy vs y
+    ax[1].scatter(y, uy)
+    ax[1].set_xlabel("y")
+    ax[1].set_ylabel("u_y")
+    ax[1].set_title("u_y vs y")
+    ax[1].grid(True)
+
+    plt.tight_layout()
+
+    return fig
+
+
+def Plot_dispersion(
+    results: NormalModeResult,
+    Q: tuple[float, float, float] = [0, 0, 0],
+    branch: int = 0,
+) -> None:
+    Q = np.array(Q)
+    print(Q.shape)
+    if Q.shape != (3,):
+        Omega = results.omega  # shape (Nq, Nbranch)
+        q = results.q_vals  # shape (Nq, 3)
+
+        sort_idx = np.lexsort((q[:, 0], q[:, 1], q[:, 2]))
+        print(sort_idx)
+        q_sorted = q[sort_idx, 0]
+        Omega_sorted = Omega[sort_idx, branch]
+
+        fig, ax = plt.subplots(figsize=(6, 6))
+
+        ax.scatter(q_sorted, Omega_sorted, s=20)
+
+        ax.set_xlabel("q-point index")
+        ax.set_ylabel(f"omega (branch {branch})")
+        ax.set_title("Phonon dispersion (scatter)")
+        ax.grid(True, alpha=0.3)
+
+        return fig
+    Omega = results.omega  # shape (Nq, Nbranch)
+    N_branch = Omega.shape[1]
+    branches = np.arange(N_branch)
+    # q_sorted = q[sort_idx, 0]
+    # Omega_sorted = Omega[sort_idx, branch]
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    ax.scatter(branches, Omega, s=20)
+
+    ax.set_xlabel("branches")
+    ax.set_ylabel("omega")
+    ax.set_title("Phonon dispersion (scatter)")
+    ax.grid(True, alpha=0.3)
+
     return fig

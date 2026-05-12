@@ -138,15 +138,15 @@ out = plot_eigenvectors(
             [1 / 3, 0.0, 0.0],
             [2 / 3, 0.0, 0.0],
             [0.0, 1 / 3, 0.0],
-            [1 / 3, 1 / 3, 0.0],
+            # vacancy
             [2 / 3, 1 / 3, 0.0],
             [0.0, 2 / 3, 0.0],
             [1 / 3, 2 / 3, 0.0],
             [2 / 3, 2 / 3, 0.0],
         ],
     ),
-    branch=5,
-    q=(1 / 3, 1 / 3, 0),
+    branch=0,
+    q=(0, 0, 0),
     save_path="./examples/Defected_examples/Eigenvector",
 )
 print(out["save_path"], out["omega"])

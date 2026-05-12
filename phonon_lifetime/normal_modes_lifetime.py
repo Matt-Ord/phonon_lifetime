@@ -61,7 +61,6 @@ class ModesAtQ:
     """The eigenvectors (normal modes) of the system."""
     q_val: np.ndarray[Any, np.dtype[np.floating]]
     """The reduced wave vectors for the normal modes."""
-    getmodesatbranch
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -163,13 +162,9 @@ def plot_dispersion(modes: NormalModeResult) -> tuple[Figure, Axes]:
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.plot(
         np.fft.ifftshift(modes.q_vals),
-        np.fft.ifftshift(modes.dispersion),
+        np.fft.ifftshift(modes.omega),
         "o-",
         label="Dispersion relation",
-    )
-    ax.set_xlim(
-        -np.pi / modes.system.lattice_constant[0],
-        np.pi / modes.system.lattice_constant[0],
     )
     ax.set_xlabel("Wave vector $q$")
     ax.set_ylabel("Frequency $\\omega(q)$")

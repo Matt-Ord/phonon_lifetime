@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from phonon_lifetime._util import get_axis
+from phonon_lifetime.phonon import MeshPhonons, as_gamma_phonons
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -125,9 +126,8 @@ def plot_survival_probability(
 
 
 def plot_overlap_weights(
-    pristine: GammaPhonons,
+    pristine: GammaPhonon,
     defects: GammaPhonons,
-    pristine_idx: int,
     *,
     ax: Axes | None = None,
 ) -> tuple[Figure, Axes, Line2D]:
@@ -138,13 +138,12 @@ def plot_overlap_weights(
 
     """
     fig, ax = get_axis(ax)
-    pristine_mode = pristine[pristine_idx]
-    overlap = get_state_overlap(pristine_mode, defects)
+    overlap = get_state_overlap(pristine, defects)
     weights = np.abs(overlap) ** 2
 
     (line,) = ax.plot(defects.omega, weights)
     line.set_marker("x")
-    ax.axvline(pristine_mode.omega, linestyle="--", label="Pristine Frequency")
+    ax.axvline(pristine.omega, linestyle="--", label="Pristine Frequency")
 
     ax.set_title("Overlap Weights against defect frequency")
     ax.set_xlabel("Defect Frequency")
@@ -159,12 +158,14 @@ def get_first_order_scatter(
     defects: GammaPhonons,
 ) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
     """Calculate the first-order scattering matrix element <p_k|V|p_i>."""
-    # overlap are W_ki = <\bar{psi}_k| |psi_i>
-    # Scatter is the matrix element <\bar{psi}_k|V|p_i> = sum_j W_kj * (omega_k - omega_j) (if we ignore k=i)
+    # Scatter is
+    # <p_k|V|p_i> = sum_j <p_k|d_j><d_j| H_def - H_pristine |p_i>
+    #             = sum_j <p_k|d_j><d_j|p_i> (omega^d_j - omega_i)
+    #             = sum_j W_jk^*  W_ji (omega^d_j - omega_i)
+    # overlap are W_ki = <d_k| |p_i>
     overlap = get_state_overlap_matrix(pristine, defects)
     d_omega = defects.omega[:, np.newaxis] - pristine.omega[np.newaxis, :]
-    scatter = np.einsum("ki,ki->ki", overlap, d_omega)
-    return np.einsum("kf,ki->fi", overlap.conj(), scatter)
+    return np.einsum("jk,ji,ji->ki", np.conj(overlap), overlap, d_omega)
 
 
 def plot_first_order_scatter(
@@ -183,10 +184,11 @@ def plot_first_order_scatter(
     fig, ax = get_axis(ax)
 
     scatter = get_first_order_scatter(pristine, defects)
-    weights = np.abs(scatter[:, pristine_idx])
+    weights = np.abs(scatter[:, pristine_idx]) ** 2
 
     (line,) = ax.plot(pristine.omega, weights)
     line.set_marker("x")
+    line.set_linestyle("")
     ax.axvline(pristine[pristine_idx].omega, linestyle="--", label="Pristine Frequency")
 
     ax.set_title("First-order Scattering against defect frequency")
@@ -197,13 +199,13 @@ def plot_first_order_scatter(
 
 
 def plot_first_order_scatter_against_qx(
-    pristine: GammaPhonons,
+    pristine: MeshPhonons,
     defects: GammaPhonons,
     pristine_idx: int,
     *,
     ax: Axes | None = None,
 ) -> tuple[Figure, Axes, Line2D]:
-    r"""Plot the first-order scattering matrix element <p_k|V|p_i> against the defect frequencies.
+    r"""Plot the first-order scattering matrix element <p_k|V|p_i> against the pristine q.
 
     for a pristine state |psi_i>, the first-order scattering with a defect mode k is given by
     $S_(omega_k)^i = |<\bar{psi}_k|V|psi_i>|^2$ where omega_k is the frequency of the defect mode k.
@@ -211,8 +213,8 @@ def plot_first_order_scatter_against_qx(
     """
     fig, ax = get_axis(ax)
 
-    scatter = get_first_order_scatter(pristine, defects)
-    weights = np.abs(scatter[:, pristine_idx])
+    scatter = get_first_order_scatter(as_gamma_phonons(pristine), defects)
+    weights = np.abs(scatter[:, pristine_idx]) ** 2
 
     for band in range(pristine.n_branch):
         band_indices = pristine.get_mode_idx(branch=band)
@@ -231,32 +233,3 @@ def plot_first_order_scatter_against_qx(
     ax.set_ylabel("Scattering Strength")
     ax.set_ylim(0, None)
     return fig, ax, line
-
-
-def calculate_decay_rates(
-    pristine: GammaPhonons,
-    defects: GammaPhonons,
-    *,
-    time: float,
-) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-    """Get the decay rate of each pristine state after a time t.
-
-    The transition rate according to first-order perturbation theory is given by Fermi's Golden Rule:
-    Gamma_i =  sum_k |<p_k|V|p_i>|^2 / hbar^2 * [ 4 sin^2((omega_k - omega_i) * t / 2) / ((omega_k - omega_i) * t)^2 ]
-    where |p_i> is the pristine state, |d_k> are the defect states.
-    In the limit of t -> infinity, this reduces to the standard Fermi's Golden Rule with a
-    delta function enforcing energy conservation.
-
-    """
-    # First order scatter is <p_k|V|p_i>
-    pristine_scatter = np.abs(get_first_order_scatter(pristine, defects)) ** 2
-
-    delta_omega = pristine.omega[:, np.newaxis] - pristine.omega[np.newaxis, :]
-    energy_weight = np.sinc(0.5 * (delta_omega) * time) ** 2
-
-    # |<p_k|V|p_i>|^2 = W_ki * omega_k^2 (if we ignore k=i)
-    # We multiply this by an energy_weight for each pristine mode
-    rate_per_state = np.einsum("fi,fi->fi", pristine_scatter, energy_weight)
-    # Set diagonals to zero to ignore self-scattering, and sum over final states
-    np.fill_diagonal(rate_per_state, 0.0)
-    return np.sum(rate_per_state, axis=0)

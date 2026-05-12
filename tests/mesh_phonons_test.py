@@ -12,6 +12,7 @@ from phonon_lifetime.phonon import (
     GammaPhonons,
     as_gamma_phonon,
     as_gamma_phonons,
+    as_supercell_phonons,
     get_gamma_phonon,
 )
 from phonon_lifetime.phonon._mesh import (  # noqa: PLC2701
@@ -200,3 +201,31 @@ def test_mesh_phonons_supercell_hamiltonian() -> None:
     big_h = _get_gamma_hamiltonian(as_gamma_phonons(big_mesh))
 
     np.testing.assert_allclose(small_h, big_h, rtol=1e-5, atol=1e-3)
+
+
+def test_mesh_phonon_as_supercell() -> None:
+    cell = build.cubic(mass=10, distance=1.0, structure="simple")
+    strain = system.build.with_nearest_neighbor_forces(
+        cell, spring_constant=1.0, periodic=(True, False, False), cutoff=1.1
+    )
+
+    small_mesh = get_mesh_phonons(strain, n_repeats=(51, 1, 1))
+    actual = as_gamma_phonons(small_mesh)
+    actual = as_supercell_phonons(actual, n_repeats=(3, 1, 1))
+
+    big_mesh = get_mesh_phonons(strain, n_repeats=(51 * 3, 1, 1))
+    expected = as_gamma_phonons(big_mesh)
+
+    np.testing.assert_array_almost_equal(
+        actual.vectors,
+        expected.vectors.reshape(51, 3, -1)[:, 0].reshape(actual.vectors.shape),
+        decimal=5,
+        err_msg="Phonon vectors do not match for supercell phonon",
+    )
+
+    np.testing.assert_array_almost_equal(
+        actual.omega,
+        expected.omega.reshape(51, 3, -1)[:, 0].reshape(actual.omega.shape),
+        decimal=5,
+        err_msg="Phonon frequencies do not match for supercell phonon",
+    )

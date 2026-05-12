@@ -9,6 +9,7 @@ from phonon_lifetime.phonon import (
     animate_phonon_1d_x,
     as_supercell_phonon,
     get_gamma_phonon,
+    get_gamma_phonons,
     plot_phonon_1d_x,
 )
 from phonon_lifetime.system import build as build_system
@@ -24,10 +25,10 @@ if __name__ == "__main__":
 
     vacancy_system = with_vacancy_defect(
         pristine=strain_system,
-        defects=VacancyDefect(defects=[]),
+        defects=VacancyDefect(defects=[0, 40]),
     )
-    phonon = get_gamma_phonon(vacancy_system, branch=303 - 23)
-    print(phonon.omega)
+    phonons = get_gamma_phonons(vacancy_system)
+    phonon = get_gamma_phonon(vacancy_system, branch=200)
     fig, ax, _ = plot_phonon_1d_x(phonon)
     ax.set_title("Phonon Mode for 1D Chain with Vacancy Defect")
     fig.savefig("./examples/figures/1d_chain.vacancy_defect.mode.png", dpi=300)

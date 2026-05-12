@@ -11,7 +11,10 @@ if TYPE_CHECKING:
 
 @dataclass(kw_only=True, frozen=True)
 class MassDefect:
-    """A mass defect in the system."""
+    """A mass defect in the system.
+
+    Each defect is represented as a tuple of (symbol, mass, index)
+    """
 
     defects: list[tuple[str | None, float, int]]
 

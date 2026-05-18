@@ -30,13 +30,13 @@ def with_nearest_neighbor_forces[C: UnitCell](
     cell: C,
     spring_constant: float,
     *,
-    cutoff: float = 2.460,
+    threshold: tuple[float, float] = (0.0, 2.460),
     periodic: tuple[bool, bool, bool] = (True, True, True),
 ) -> StrainSystem[C]:
     """Return a new PristineSystem with nearest neighbor forces added.
 
     The forces are added in the form of a spring force between nearest neighbor, with the given spring constant.
-    The cutoff is used to determine which atoms are considered nearest neighbor.
+    The threshold=(lower, upper) is used to determine which atoms are considered nearest neighbor.
 
     """
     n_repeats: tuple[int, int, int] = tuple(3 if p else 1 for p in periodic)  # ty:ignore[invalid-assignment]
@@ -49,9 +49,14 @@ def with_nearest_neighbor_forces[C: UnitCell](
     as_ase = as_ase_atoms(cell).repeat(n_repeats)
     as_ase.set_pbc(periodic)
 
-    locations_i, locations_j, directions = neighbor_list("ijD", as_ase, cutoff=cutoff)
+    locations_i, locations_j, directions = neighbor_list(
+        "ijD", as_ase, cutoff=threshold[1]
+    )
     for i, j, d in zip(locations_i, locations_j, directions, strict=False):
         if i >= data.shape[0]:
+            continue
+        distance = np.linalg.norm(d)
+        if distance < threshold[0] or distance > threshold[1]:
             continue
         direction = d / np.linalg.norm(d)
         np.testing.assert_allclose(1, np.linalg.norm(direction))

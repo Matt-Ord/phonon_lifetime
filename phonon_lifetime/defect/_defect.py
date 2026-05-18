@@ -1,11 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Literal, Self, override
+from typing import Literal, Self, overload, override
 
 import numpy as np
 
 from phonon_lifetime import StrainSystem
-from phonon_lifetime.cell import UnitCell
-from phonon_lifetime.phonon import GammaPhonon, GammaPhonons, Phonon, Phonons
+from phonon_lifetime.cell import SuperCell, UnitCell
+from phonon_lifetime.phonon import (
+    GammaPhonon,
+    GammaPhonons,
+    MeshPhonons,
+    Phonon,
+    Phonons,
+    as_gamma_phonons,
+)
 
 
 class DefectCell[C: UnitCell = UnitCell](UnitCell, ABC):
@@ -83,11 +90,30 @@ class DefectCell[C: UnitCell = UnitCell](UnitCell, ABC):
             q=phonon.q,
         )
 
+    @overload
+    def get_pristine_phonons(
+        self,
+        phonon: MeshPhonons[StrainSystem[DefectCell[C]]],
+    ) -> MeshPhonons[StrainSystem[C]]: ...
+
+    @overload
+    def get_pristine_phonons(
+        self,
+        phonon: Phonons[StrainSystem[DefectCell[C]]],
+    ) -> Phonons[StrainSystem[C]]: ...
+
     def get_pristine_phonons(
         self,
         phonon: Phonons[StrainSystem[DefectCell[C]]],
     ) -> Phonons[StrainSystem[C]]:
         """Create a defect cell from a pristine cell and a strain."""
+        # TODO: not too sure this works?
+        if isinstance(phonon, MeshPhonons):
+            return MeshPhonons[StrainSystem[C]](
+                system=self.get_pristine_strain(phonon.system),
+                omega=phonon.omega,
+                vectors=self._get_pristine_phonon_vectors(phonon.vectors),
+            )
         return Phonons[StrainSystem[C]](
             system=self.get_pristine_strain(phonon.system),
             omega=phonon.omega,
@@ -106,6 +132,18 @@ def as_pristine_phonon[C: UnitCell](
     phonon: Phonon[StrainSystem[DefectCell[C]]],
 ) -> Phonon[StrainSystem[C]]:
     return phonon.system.cell.get_pristine_phonon(phonon)
+
+
+@overload
+def as_pristine_phonons[C: UnitCell](
+    phonons: MeshPhonons[StrainSystem[DefectCell[C]]],
+) -> MeshPhonons[StrainSystem[C]]: ...
+
+
+@overload
+def as_pristine_phonons[C: UnitCell](
+    phonons: Phonons[StrainSystem[DefectCell[C]]],
+) -> Phonons[StrainSystem[C]]: ...
 
 
 def as_pristine_phonons[C: UnitCell](
@@ -129,14 +167,7 @@ def as_pristine_gamma_phonon[C: UnitCell](
 
 
 def as_pristine_gamma_phonons[C: UnitCell](
-    phonons: GammaPhonons[StrainSystem[DefectCell[C]]],
-) -> GammaPhonons[StrainSystem[C]]:
+    phonons: MeshPhonons[StrainSystem[DefectCell[C]]],
+) -> GammaPhonons[StrainSystem[SuperCell[C]]]:
     as_pristine = as_pristine_phonons(phonons)
-    assert np.allclose(as_pristine.q_values, [0.0, 0.0, 0.0]), (
-        "Input phonons must be Gamma phonons."
-    )
-    return GammaPhonons(
-        system=as_pristine.system,
-        omega=as_pristine.omega,
-        vectors=as_pristine.vectors,
-    )
+    return as_gamma_phonons(as_pristine)

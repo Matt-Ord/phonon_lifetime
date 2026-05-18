@@ -14,7 +14,7 @@ if __name__ == "__main__":
         SuperCell(cell, n_repeats=(101, 1, 1)),
         spring_constant=1.0,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     system = with_mass_defect(

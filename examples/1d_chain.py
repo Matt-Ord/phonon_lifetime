@@ -17,7 +17,7 @@ from phonon_lifetime.phonon import (
 if __name__ == "__main__":
     cell = build.cubic(mass=10, distance=1.0, structure="simple")
     strain = system.build.with_nearest_neighbor_forces(
-        cell, spring_constant=1.0, periodic=(True, False, False), cutoff=1.1
+        cell, spring_constant=1.0, periodic=(True, False, False), threshold=(0.0, 1.1)
     )
 
     phonon = get_mesh_phonon(strain, n_repeats=(51, 1, 1), q=(1, 0, 0), branch=2)

@@ -20,7 +20,7 @@ if __name__ == "__main__":
         SuperCell(cell, (101, 1, 1)),
         spring_constant=1.0,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     vacancy_system = with_vacancy_defect(

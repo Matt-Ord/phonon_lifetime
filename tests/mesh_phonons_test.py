@@ -66,7 +66,7 @@ def test_mesh_phonons_q_points_match_phonopy(
         primitive,
         spring_constant=1.0,
         periodic=(True, True, True),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     mesh_phonons = get_mesh_phonons(base_system, n_repeats=n_repeats)
@@ -87,7 +87,7 @@ def test_q_from_iq_matches_q_values(n_repeats: tuple[int, int, int]) -> None:
         primitive,
         spring_constant=1.0,
         periodic=(True, True, True),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     mesh_phonons = get_mesh_phonons(base_system, n_repeats=n_repeats)
@@ -107,7 +107,7 @@ def test_mesh_phonons_gamma_energy() -> None:
         primitive,
         spring_constant=1.0,
         periodic=(True, True, True),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     mesh_phonons = get_mesh_phonons(base_system, n_repeats=(3, 3, 1))
@@ -118,7 +118,7 @@ def test_mesh_phonons_gamma_energy() -> None:
         SuperCell(primitive, n_repeats=(3, 3, 1)),
         spring_constant=1.0,
         periodic=(True, True, True),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
     expected = get_gamma_phonon(repeat_system, branch=0)
 
@@ -138,14 +138,14 @@ def test_mesh_phonons_supercell_energy() -> None:
         cell,
         spring_constant=1.0,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     supercell_strain = build_system.with_nearest_neighbor_forces(
         SuperCell(cell, (3, 1, 1)),
         spring_constant=1.0,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     small_mesh = get_mesh_phonons(supercell_strain, n_repeats=(7, 1, 1))
@@ -180,14 +180,14 @@ def test_mesh_phonons_supercell_hamiltonian() -> None:
         cell,
         spring_constant=1.0,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     supercell_strain = build_system.with_nearest_neighbor_forces(
         SuperCell(cell, (3, 1, 1)),
         spring_constant=1.0,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     small_mesh = get_mesh_phonons(supercell_strain, n_repeats=(7, 1, 1))
@@ -203,7 +203,7 @@ def test_mesh_phonons_supercell_hamiltonian() -> None:
 def test_mesh_phonon_as_supercell() -> None:
     cell = build.cubic(mass=10, distance=1.0, structure="simple")
     strain = system.build.with_nearest_neighbor_forces(
-        cell, spring_constant=1.0, periodic=(True, False, False), cutoff=1.1
+        cell, spring_constant=1.0, periodic=(True, False, False), threshold=(0.0, 1.1)
     )
 
     small_mesh = get_mesh_phonons(strain, n_repeats=(51, 1, 1))

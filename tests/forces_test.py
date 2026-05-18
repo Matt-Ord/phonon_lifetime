@@ -149,7 +149,7 @@ def test_build_force_matrix_x() -> None:
         cell,
         spring_constant=spring_constant,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     actual = system.strain
@@ -161,7 +161,7 @@ def test_build_force_matrix_x() -> None:
         cell.primitive_cell,
         spring_constant=spring_constant,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
     supercell_system = as_supercell(system, n_repeats=n_repeats)
     actual = supercell_system.strain
@@ -178,7 +178,7 @@ def test_build_force_matrix_y() -> None:
         cell,
         spring_constant=spring_constant,
         periodic=(False, True, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     actual = system.strain
@@ -190,7 +190,7 @@ def test_build_force_matrix_y() -> None:
         cell.primitive_cell,
         spring_constant=spring_constant,
         periodic=(False, True, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
     supercell_system = as_supercell(system, n_repeats=n_repeats)
     actual = supercell_system.strain
@@ -206,7 +206,7 @@ def test_build_force_matrix_explicit() -> None:
         cell,
         spring_constant=spring_constant,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     actual = system.strain

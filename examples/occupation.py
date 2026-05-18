@@ -1,12 +1,3 @@
-# /// script
-# requires-python = ">=3.14,<3.15"
-# dependencies = [
-#     "phonon_lifetime",
-# ]
-# [tool.uv.sources]
-# phonon_lifetime = { git = "https://github.com/Matt-Ord/phonon_lifetime.git", rev = "58234049020dd9dcdc5b001479ccec6d8b71e08c" }
-# ///
-
 import numpy as np
 from matplotlib import pyplot as plt
 

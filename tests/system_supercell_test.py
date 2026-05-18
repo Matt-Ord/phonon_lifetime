@@ -9,7 +9,7 @@ def test_strain_as_supercell_shape() -> None:
         primitive,
         spring_constant=1.0,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     first_supercell = system.as_supercell(strain, n_repeats=(5, 4, 1))
@@ -25,7 +25,7 @@ def test_strain_as_supercell_twice() -> None:
         primitive,
         spring_constant=1.0,
         periodic=(True, True, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     repeated_twice = system.as_supercell(
@@ -47,7 +47,7 @@ def test_strain_as_supercell_vs_supercell_forces() -> None:
         primitive,
         spring_constant=1.0,
         periodic=(True, True, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     repeated_base_system = system.as_supercell(base_system, n_repeats=(5, 3, 1))
@@ -56,7 +56,7 @@ def test_strain_as_supercell_vs_supercell_forces() -> None:
         repeated_base_system.cell,
         spring_constant=1.0,
         periodic=(True, True, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
     np.testing.assert_array_equal(
         repeated_base_system.strain_repeats, repeated_system.strain_repeats
@@ -70,7 +70,7 @@ def test_strain_as_supercell_vs_supercell_forces_graphene() -> None:
         primitive,
         spring_constant=1.0,
         periodic=(True, True, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
 
     repeated_base_system = system.as_supercell(base_system, n_repeats=(5, 3, 1))
@@ -79,7 +79,7 @@ def test_strain_as_supercell_vs_supercell_forces_graphene() -> None:
         repeated_base_system.cell,
         spring_constant=1.0,
         periodic=(True, True, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
     np.testing.assert_array_almost_equal(
         repeated_base_system.strain_repeats, repeated_system.strain_repeats

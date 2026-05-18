@@ -21,7 +21,7 @@ def test_vacancy_get_pristine_strain_fills_removed_entries_with_zero() -> None:
         cell.build.graphene(mass=10, distance=1.0),
         spring_constant=1.0,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
     defects = [1]
 
@@ -58,7 +58,7 @@ def test_vacancy_pristine_roundtrip_preserves_defective_tensor() -> None:
         cell.build.graphene(mass=10, distance=1.0),
         spring_constant=1.0,
         periodic=(True, False, False),
-        cutoff=1.1,
+        threshold=(0.0, 1.1),
     )
     pristine = system.as_supercell(primitive, n_repeats=(2, 1, 1))
 

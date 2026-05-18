@@ -17,7 +17,7 @@ from phonon_lifetime.system import build as build_system
 if __name__ == "__main__":
     cell = build_cell.cubic(mass=10, distance=1.0, structure="simple")
     system = build_system.with_nearest_neighbor_forces(
-        cell, spring_constant=1.0, periodic=(True, True, False), cutoff=1.1
+        cell, spring_constant=1.0, periodic=(True, True, False), threshold=(0.0, 1.1)
     )
     result = get_mesh_phonons(system, n_repeats=(11, 11, 1))
 

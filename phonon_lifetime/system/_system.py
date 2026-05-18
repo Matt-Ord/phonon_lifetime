@@ -75,6 +75,46 @@ class StrainSystem[C: UnitCell = UnitCell]:
         """Get the strain repeats of the system."""
         return self._strain_repeats
 
+    def __add__[C_: UnitCell](self, other: StrainSystem[C_]) -> StrainSystem[C_]:
+        if self.cell != other.cell:
+            msg = f"Cannot add two StrainSystems with different cells, but got {self.cell} and {other.cell}."
+            raise ValueError(msg)
+
+        repeats = tuple(
+            map(max, self.strain_repeats, other.strain_repeats, strict=True)
+        )
+        strain = np.zeros(
+            (self.cell.n_atoms, *repeats, self.cell.n_atoms, 3, 3),
+            dtype=np.float64,
+        )
+        strain[
+            :,
+            : self.strain_repeats[0],
+            : self.strain_repeats[1],
+            : self.strain_repeats[2],
+            :,
+            :,
+            :,
+        ] += self.strain.reshape(
+            self.cell.n_atoms, *self.strain_repeats, self.cell.n_atoms, 3, 3
+        )
+        strain[
+            :,
+            : other.strain_repeats[0],
+            : other.strain_repeats[1],
+            : other.strain_repeats[2],
+            :,
+            :,
+            :,
+        ] += other.strain.reshape(
+            other.cell.n_atoms, *other.strain_repeats, other.cell.n_atoms, 3, 3
+        )
+        return StrainSystem(
+            cell=self.cell,
+            strain=strain.reshape(self.cell.n_atoms, -1, 3, 3),
+            strain_repeats=repeats,
+        )
+
 
 def _get_repeated_strain(
     strian_system: StrainSystem,

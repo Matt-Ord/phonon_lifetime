@@ -80,13 +80,11 @@ class StrainSystem[C: UnitCell = UnitCell]:
             msg = f"Cannot add two StrainSystems with different cells, but got {self.cell} and {other.cell}."
             raise ValueError(msg)
 
-        repeats = tuple(
+        repeats: tuple[int, int, int] = tuple(
             map(max, self.strain_repeats, other.strain_repeats, strict=True)
-        )
-        strain = np.zeros(
-            (self.cell.n_atoms, *repeats, self.cell.n_atoms, 3, 3),
-            dtype=np.float64,
-        )
+        )  # ty:ignore[invalid-assignment]
+        shape = (self.cell.n_atoms, *repeats, self.cell.n_atoms, 3, 3)
+        strain = np.zeros(shape)
         strain[
             :,
             : self.strain_repeats[0],
@@ -109,9 +107,9 @@ class StrainSystem[C: UnitCell = UnitCell]:
         ] += other.strain.reshape(
             other.cell.n_atoms, *other.strain_repeats, other.cell.n_atoms, 3, 3
         )
-        return StrainSystem(
+        return StrainSystem[C_](
             cell=self.cell,
-            strain=strain.reshape(self.cell.n_atoms, -1, 3, 3),
+            strain=strain.reshape(self.cell.n_atoms, -1, 3, 3),  # ty:ignore[invalid-argument-type]
             strain_repeats=repeats,
         )
 

@@ -113,6 +113,7 @@ class DefectCell[C: UnitCell = UnitCell](UnitCell, ABC):
                 system=self.get_pristine_strain(phonon.system),
                 omega=phonon.omega,
                 vectors=self._get_pristine_phonon_vectors(phonon.vectors),
+                n_repeats=phonon.n_repeats,
             )
         return Phonons[StrainSystem[C]](
             system=self.get_pristine_strain(phonon.system),

@@ -6,6 +6,17 @@ if TYPE_CHECKING:
     import numpy as np
 
 
+def _get_fundamental_repeats(
+    cell: UnitCell, repeats: tuple[int, int, int] = (1, 1, 1)
+) -> tuple[UnitCell, tuple[int, int, int]]:
+    if isinstance(cell, SuperCell):
+        return _get_fundamental_repeats(
+            cell.primitive_cell,
+            tuple(a * b for a, b in zip(repeats, cell.n_repeats, strict=True)),
+        )
+    return (cell, repeats)
+
+
 class SuperCell[C: UnitCell](UnitCell):
     """Represents the supercell of a system."""
 
@@ -59,13 +70,10 @@ class SuperCell[C: UnitCell](UnitCell):
         )
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, SuperCell):
-            return False
-
-        return (
-            self.primitive_cell == other.primitive_cell
-            and self.n_repeats == other.n_repeats
-        )
+        self_cell, self_repeats = _get_fundamental_repeats(self)
+        other_cell, other_repeats = _get_fundamental_repeats(other)
+        return self_cell == other_cell and self_repeats == other_repeats
 
     def __hash__(self) -> int:
-        return hash((self.primitive_cell, self.n_repeats))
+        self_cell, self_repeats = _get_fundamental_repeats(self)
+        return hash((self_cell, self_repeats))

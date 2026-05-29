@@ -107,7 +107,6 @@ class DefectCell[C: UnitCell = UnitCell](UnitCell, ABC):
         phonon: Phonons[StrainSystem[DefectCell[C]]],
     ) -> Phonons[StrainSystem[C]]:
         """Create a defect cell from a pristine cell and a strain."""
-        # TODO: not too sure this works?
         if isinstance(phonon, MeshPhonons):
             return MeshPhonons[StrainSystem[C]](
                 system=self.get_pristine_strain(phonon.system),

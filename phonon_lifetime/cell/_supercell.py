@@ -70,6 +70,8 @@ class SuperCell[C: UnitCell](UnitCell):
         )
 
     def __eq__(self, other: object) -> bool:
+        if not isinstance(other, UnitCell):
+            return False
         self_cell, self_repeats = _get_fundamental_repeats(self)
         other_cell, other_repeats = _get_fundamental_repeats(other)
         return self_cell == other_cell and self_repeats == other_repeats
